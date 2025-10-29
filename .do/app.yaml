@@ -1,0 +1,30 @@
+name: resusync
+services:
+- name: backend
+  source_dir: backend
+  github:
+    repo: arunkumarsukdevchavan-gif/resusync
+    branch: main
+  run_command: npm start
+  environment_slug: node-js
+  instance_count: 1
+  instance_size_slug: basic-xxs
+  envs:
+  - key: NODE_ENV
+    value: production
+  - key: PORT
+    value: "8080"
+  - key: MONGODB_URI
+    value: mongodb+srv://resumesync:resumesync@cluster0.mongodb.net/resumesync?retryWrites=true&w=majority
+  http_port: 8080
+static_sites:
+- name: frontend
+  source_dir: frontend
+  github:
+    repo: arunkumarsukdevchavan-gif/resusync
+    branch: main
+  build_command: npm run build
+  output_dir: dist
+  envs:
+  - key: VITE_API_URL
+    value: ${backend.PUBLIC_URL}
