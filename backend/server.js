@@ -4,8 +4,10 @@ const dotenv=require('dotenv');
 const cors=require('cors');
 const resumeRouter=require('./routes/resume');
 const authRouter=require('./routes/auth');
+
 const app=express();
 dotenv.config();
+
 app.use(cors({
   origin: [
     'http://localhost:5173', 
@@ -20,10 +22,29 @@ app.use(cors({
   ],
   credentials: true
 }));
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use('/api/resume',resumeRouter);
 app.use('/api/auth',authRouter);
+
+// Health check endpoint
+app.get('/api/health', (req, res) => {
+  res.json({ 
+    status: 'healthy', 
+    timestamp: new Date().toISOString(),
+    message: 'ResuSync API is running with Enhanced AI'
+  });
+});
+
 const PORT=process.env.PORT||5001;
-mongoose.connect(process.env.MONGODB_URI,{useNewUrlParser:true,useUnifiedTopology:true}).then(()=>{console.log('MongoDB connected')}).catch(e=>console.error(e));
-app.listen(PORT,()=>console.log('Server running on',PORT));
+
+// MongoDB connection
+mongoose.connect(process.env.MONGODB_URI,{useNewUrlParser:true,useUnifiedTopology:true})
+  .then(async () => {
+    console.log('MongoDB connected');
+    console.log('🚀 Server ready - Enhanced AI will initialize on first request');
+  })
+  .catch(e => console.error(e));
+
+app.listen(PORT,() => console.log('Server running on',PORT));

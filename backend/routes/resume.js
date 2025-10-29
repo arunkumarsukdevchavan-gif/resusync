@@ -6,6 +6,7 @@ const fs=require('fs');
 const path=require('path');
 const Resume=require('../models/Resume');
 const LocalResumeAI = require('../ai/localModel');
+const enhancedAI = require('../ai/index');
 const PDFGenerator = require('../services/pdfGenerator');
 const dotenv=require('dotenv');
 dotenv.config();
@@ -15,11 +16,19 @@ const upload=multer({
   dest:'./uploads/',
   fileFilter: (req, file, cb) => {
     if (file.fieldname === 'resume') {
-      // Accept PDF files for resume
-      if (file.mimetype === 'application/pdf') {
+      // Accept PDF, DOC, DOCX, and TXT files for resume
+      const allowedMimeTypes = [
+        'application/pdf',
+        'application/msword',
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        'text/plain'
+      ];
+      
+      if (allowedMimeTypes.includes(file.mimetype) || 
+          file.originalname.match(/\.(pdf|doc|docx|txt)$/i)) {
         cb(null, true);
       } else {
-        cb(new Error('Only PDF files are allowed for resume'), false);
+        cb(new Error('Only PDF, DOC, DOCX, and TXT files are allowed for resume'), false);
       }
     } else if (file.fieldname === 'photo') {
       // Accept image files for photo
@@ -50,13 +59,42 @@ router.get('/test', (req, res) => {
 // helper to extract text from uploaded file or text field
 async function extractText(file){
   if(!file) return '';
-  const data=fs.readFileSync(file.path);
-  try{
-    const r=await pdf(data);
-    return r.text;
-  }catch(e){
-    // if pdf-parse fails, return empty
-    return data.toString('utf8');
+  
+  try {
+    const data = fs.readFileSync(file.path);
+    const fileExtension = path.extname(file.originalname).toLowerCase();
+    
+    // Handle different file types
+    switch(fileExtension) {
+      case '.pdf':
+        try {
+          const result = await pdf(data);
+          return result.text;
+        } catch (e) {
+          console.log('PDF parsing failed, trying as text:', e.message);
+          return data.toString('utf8');
+        }
+        
+      case '.txt':
+        return data.toString('utf8');
+        
+      case '.doc':
+      case '.docx':
+        // For now, treat as text - in production you might want to use a proper DOC parser
+        try {
+          return data.toString('utf8');
+        } catch (e) {
+          console.log('DOC/DOCX parsing failed:', e.message);
+          return '';
+        }
+        
+      default:
+        // Fallback to text
+        return data.toString('utf8');
+    }
+  } catch (e) {
+    console.log('File extraction error:', e.message);
+    return '';
   }
 }
 
@@ -116,51 +154,57 @@ router.post('/analyze', upload.fields([
     }
 
     try {
-      console.log('Using Enhanced Local AI Model...');
+      console.log('🚀 Using Enhanced AI Model with 4-Factor Scoring...');
+      
+      // Use the new enhanced AI system
+      const analysisResult = await enhancedAI.analyzeResume(originalText, jobDescription, { name, email });
+      
+      // Calculate overall score from the Professional ATS Analysis
+      const professionalATS = analysisResult.professional_ats_analysis;
+      const overallScore = professionalATS.overallATSScore;
+      
+      console.log(`🏆 Professional ATS Analysis Complete:`);
+      console.log(`   📝 Content: ${professionalATS.content.score}% | 📋 Sections: ${professionalATS.sections.score}%`);
+      console.log(`   🎯 ATS Essentials: ${professionalATS.atsEssentials.score}% | 🔧 Tailoring: ${professionalATS.tailoring.score}%`);
+      console.log(`   🌟 Overall ATS Score: ${overallScore}%`);
+      
+      // Enhanced scoring object for database storage
+      const enhancedScoring = {
+        atsScore: overallScore,
+        skillsMatch: professionalATS.tailoring.details.hardSkills.score,
+        contentQuality: professionalATS.content.score,
+        formatScore: professionalATS.atsEssentials.score,
+        overallScore: overallScore,
+        // Additional professional insights
+        keywordMatchPercentage: professionalATS.tailoring.details.hardSkills.matchRate,
+        quantifiableAchievements: professionalATS.content.details.quantification
+      };
       
       // Extract personal information from resume
       const personalInfo = await localAI.extractPersonalInformation(originalText);
       
-      // Detect job role from job description
+      // Detect job role from job description  
       const jobRole = await localAI.detectJobRole(jobDescription);
       
-      // Generate suggestions based on job role
-      const suggestions = await localAI.analyzeSuggestions(originalText, jobDescription, jobRole);
-      
-      // Generate optimized resume using extracted info
-      const generatedResume = await localAI.generateOptimizedResume(originalText, jobDescription, personalInfo);
-      
-      // Generate cover letter
-      const coverLetter = await localAI.generateCoverLetter(originalText, jobDescription, personalInfo);
-
-      // Create analysis scores for sidebar
-      const analysis = {
-        atsScore: Math.floor(Math.random() * 30 + 60), // 60-90%
-        keywordMatch: Math.floor(Math.random() * 40 + 50), // 50-90%
-        contentQuality: Math.floor(Math.random() * 30 + 60), // 60-90%
-        format: Math.floor(Math.random() * 20 + 80), // 80-100%
-        impact: Math.floor(Math.random() * 40 + 40) // 40-80%
-      };
-
-      console.log('Enhanced AI generation completed successfully');
-      
-      // Format suggestions properly for database storage
+      // Format intelligent suggestions properly for database storage and frontend display
       let formattedSuggestions = '';
-      if (suggestions && typeof suggestions === 'object' && suggestions.suggestions) {
-        // Handle object format from AI model
-        if (Array.isArray(suggestions.suggestions) && suggestions.suggestions.length > 0) {
-          formattedSuggestions = suggestions.suggestions.map(s => 
-            `${s.priority || 'MEDIUM'} PRIORITY - ${s.title || 'Suggestion'}\n${s.suggestion || ''}\n\nImpact: ${s.impact || 'Not specified'}\n${s.keywords ? `Keywords to add: ${s.keywords.join(', ')}` : ''}`
-          ).join('\n\n---\n\n');
-        } else {
-          formattedSuggestions = `Job Role: ${suggestions.jobRole || 'General'}\nATS Score: ${suggestions.overallScore || 'Not calculated'}%\nKey Strengths: ${suggestions.keyStrengths ? suggestions.keyStrengths.join(', ') : 'None identified'}\nImprovement Areas: ${suggestions.improvementAreas ? suggestions.improvementAreas.join(', ') : 'None identified'}`;
-        }
-      } else if (Array.isArray(suggestions)) {
-        formattedSuggestions = suggestions.join('\n\n');
-      } else if (typeof suggestions === 'string') {
-        formattedSuggestions = suggestions;
+      if (Array.isArray(analysisResult.suggestions)) {
+        // New intelligent suggestions format - each suggestion is an object
+        formattedSuggestions = analysisResult.suggestions.map(suggestion => {
+          if (typeof suggestion === 'object' && suggestion.category) {
+            return `${suggestion.priority} PRIORITY - ${suggestion.title}\n` +
+                   `Category: ${suggestion.category}\n` +
+                   `Issue: ${suggestion.issue}\n` +
+                   `Suggestion: ${suggestion.suggestion}\n` +
+                   `Impact: ${suggestion.impact}\n` +
+                   `Keywords: ${suggestion.keywords ? suggestion.keywords.join(', ') : 'N/A'}`;
+          }
+          return suggestion.toString();
+        }).join('\n\n---\n\n');
+      } else if (typeof analysisResult.suggestions === 'string') {
+        formattedSuggestions = analysisResult.suggestions;
       } else {
-        formattedSuggestions = JSON.stringify(suggestions);
+        formattedSuggestions = JSON.stringify(analysisResult.suggestions);
       }
       
       const doc = await Resume.create({
@@ -170,11 +214,15 @@ router.post('/analyze', upload.fields([
         originalText,
         jobDescription,
         suggestions: formattedSuggestions,
-        generatedResume,
-        coverLetter,
+        generatedResume: analysisResult.generated_resume,
+        coverLetter: analysisResult.cover_letter,
         personalInfo: JSON.stringify(personalInfo),
         jobRole,
-        photoPath
+        photoPath,
+        // Save the Professional ATS Analysis
+        professionalATSAnalysis: analysisResult.professional_ats_analysis,
+        // Save the enhanced 4-factor scoring (legacy support)
+        enhancedScoring: enhancedScoring
       });
       
       return res.json({
@@ -182,14 +230,27 @@ router.post('/analyze', upload.fields([
         data: {
           id: doc._id,
           suggestions: formattedSuggestions,
-          generated_resume: generatedResume,
-          cover_letter: coverLetter,
+          generated_resume: analysisResult.generated_resume,
+          cover_letter: analysisResult.cover_letter,
           personal_info: personalInfo,
           job_role: jobRole,
           has_photo: !!photoPath,
-          analysis: analysis
+          // Return Professional ATS Analysis for frontend display
+          professional_ats_analysis: analysisResult.professional_ats_analysis,
+          enhanced_scoring: enhancedScoring,
+          // Return intelligent suggestions in structured format
+          intelligent_suggestions: analysisResult.suggestions,
+          resume_analysis: analysisResult.resume_analysis,
+          // Legacy analysis format for backward compatibility
+          analysis: {
+            atsScore: enhancedScoring.atsScore,
+            keywordMatch: enhancedScoring.skillsMatch,
+            contentQuality: enhancedScoring.contentQuality,
+            format: enhancedScoring.formatScore,
+            impact: enhancedScoring.overallScore
+          }
         },
-        note: 'Generated using Enhanced Local AI Model with accurate data extraction!'
+        note: '🏆 Generated using Professional Enterprise-Grade ATS Analysis System!'
       });
       
     } catch (localAIError) {
@@ -200,7 +261,7 @@ router.post('/analyze', upload.fields([
       try {
         const [suggestions, generated_resume, cover_letter] = await Promise.all([
           localAI.analyzeSuggestions(originalText, jobDescription),
-          localAI.generateResume(originalText, jobDescription),
+          localAI.generateOptimizedResume(originalText, jobDescription, { name, email }),
           localAI.generateCoverLetter(originalText, jobDescription, { name, email })
         ]);
 

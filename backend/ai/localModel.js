@@ -199,18 +199,443 @@ class LocalResumeAI {
     return 'general';
   }
 
-  // Generate analysis suggestions
+  // Enhanced intelligent suggestion system that analyzes resume comprehensively
   async analyzeSuggestions(originalResume, jobDescription, jobRole) {
+    console.log('🔍 Starting comprehensive resume analysis for intelligent suggestions...');
+    
+    const resumeAnalysis = await this.performDeepResumeAnalysis(originalResume, jobDescription);
     const suggestions = [];
     
-    // ATS optimization suggestions
-    suggestions.push("🎯 Add more job-specific keywords from the job description to improve ATS matching");
-    suggestions.push("📊 Include quantified achievements with numbers, percentages, or metrics");
-    suggestions.push("🔧 Use action verbs like 'developed', 'implemented', 'optimized' to start bullet points");
-    suggestions.push("📝 Tailor your professional summary to match the specific job requirements");
-    suggestions.push("🎨 Ensure consistent formatting and use standard section headings");
+    // 1. CONTENT ANALYSIS SUGGESTIONS
+    if (resumeAnalysis.content.missingQuantifiableAchievements) {
+      suggestions.push({
+        category: 'Content Quality',
+        priority: 'HIGH',
+        title: 'Add Quantifiable Achievements',
+        issue: 'Your resume lacks measurable results and impact metrics',
+        suggestion: 'Add specific numbers, percentages, or metrics to showcase your achievements. For example: "Increased system performance by 30%" or "Managed team of 5 developers"',
+        impact: 'Quantified achievements are 40% more likely to get recruiter attention',
+        keywords: ['metrics', 'numbers', 'percentages', 'results']
+      });
+    }
     
-    return suggestions.join('\n\n');
+    if (resumeAnalysis.content.weakActionVerbs) {
+      suggestions.push({
+        category: 'Professional Language',
+        priority: 'MEDIUM',
+        title: 'Strengthen Action Verbs',
+        issue: 'Using weak or passive language in descriptions',
+        suggestion: 'Replace weak verbs with strong action words. Use: "Developed, Implemented, Optimized, Led, Architected, Delivered" instead of "Worked on, Helped with, Involved in"',
+        impact: 'Strong action verbs make your resume 25% more impactful',
+        keywords: ['action verbs', 'active voice', 'professional language']
+      });
+    }
+    
+    if (resumeAnalysis.content.vagueDescriptions) {
+      suggestions.push({
+        category: 'Clarity & Detail',
+        priority: 'HIGH',
+        title: 'Add Specific Technical Details',
+        issue: 'Project and experience descriptions are too vague',
+        suggestion: 'Include specific technologies, frameworks, and methodologies used. Instead of "Built a web application", write "Developed a React.js e-commerce application with Node.js backend and MongoDB database"',
+        impact: 'Specific technical details improve ATS keyword matching by 45%',
+        keywords: ['technical details', 'technologies', 'frameworks']
+      });
+    }
+    
+    // 2. STRUCTURE ANALYSIS SUGGESTIONS
+    if (resumeAnalysis.structure.missingSections.length > 0) {
+      suggestions.push({
+        category: 'Resume Structure',
+        priority: 'HIGH',
+        title: 'Add Missing Essential Sections',
+        issue: `Missing important sections: ${resumeAnalysis.structure.missingSections.join(', ')}`,
+        suggestion: 'A complete resume should include: Contact Info, Professional Summary/Objective, Experience/Internships, Education, Skills, and Projects. Consider adding certifications if relevant.',
+        impact: 'Complete resume structure increases ATS parsing success by 60%',
+        keywords: ['resume sections', 'structure', 'organization']
+      });
+    }
+    
+    if (resumeAnalysis.structure.poorOrganization) {
+      suggestions.push({
+        category: 'Organization',
+        priority: 'MEDIUM',
+        title: 'Improve Resume Organization',
+        issue: 'Resume sections are not logically ordered or clearly defined',
+        suggestion: 'Follow this order: Contact → Summary → Experience → Education → Skills → Projects → Certifications. Use clear section headers and consistent formatting.',
+        impact: 'Better organization improves readability and ATS parsing',
+        keywords: ['organization', 'section order', 'formatting']
+      });
+    }
+    
+    // 3. ATS OPTIMIZATION SUGGESTIONS
+    if (resumeAnalysis.ats.keywordGap > 30) {
+      suggestions.push({
+        category: 'ATS Optimization',
+        priority: 'CRITICAL',
+        title: 'Critical Keyword Gap Detected',
+        issue: `Only ${100 - resumeAnalysis.ats.keywordGap}% keyword match with job description`,
+        suggestion: `Incorporate these missing keywords naturally: ${resumeAnalysis.ats.missingKeywords.slice(0, 8).join(', ')}. Add them to your skills section and project descriptions.`,
+        impact: 'Improving keyword match above 70% increases ATS success rate by 300%',
+        keywords: resumeAnalysis.ats.missingKeywords.slice(0, 10)
+      });
+    }
+    
+    if (resumeAnalysis.ats.skillsMismatch.length > 0) {
+      suggestions.push({
+        category: 'Skills Alignment',
+        priority: 'HIGH',
+        title: 'Skills Mismatch with Job Requirements',
+        issue: `Missing key skills expected for this role: ${resumeAnalysis.ats.skillsMismatch.slice(0, 5).join(', ')}`,
+        suggestion: 'If you have experience with these skills, add them prominently. If not, consider learning them or highlighting transferable skills.',
+        impact: 'Matching required skills increases interview chances by 80%',
+        keywords: resumeAnalysis.ats.skillsMismatch
+      });
+    }
+    
+    // 4. ROLE-SPECIFIC SUGGESTIONS
+    const roleSpecificSuggestions = await this.generateRoleSpecificSuggestions(resumeAnalysis, jobRole, jobDescription);
+    suggestions.push(...roleSpecificSuggestions);
+    
+    // 5. FORMATTING SUGGESTIONS
+    if (resumeAnalysis.formatting.issues.length > 0) {
+      suggestions.push({
+        category: 'Formatting',
+        priority: 'MEDIUM',
+        title: 'Fix Formatting Issues',
+        issue: `Formatting problems: ${resumeAnalysis.formatting.issues.join(', ')}`,
+        suggestion: 'Use consistent bullet points, uniform fonts, proper spacing, and clear section headers. Avoid special characters that ATS cannot parse.',
+        impact: 'Clean formatting improves ATS parsing accuracy by 25%',
+        keywords: ['formatting', 'clean design', 'ATS-friendly']
+      });
+    }
+    
+    // 6. CAREER LEVEL SUGGESTIONS
+    if (resumeAnalysis.careerLevel === 'entry-level') {
+      suggestions.push({
+        category: 'Entry-Level Focus',
+        priority: 'MEDIUM',
+        title: 'Highlight Educational Projects & Skills',
+        issue: 'Limited professional experience detected',
+        suggestion: 'Emphasize academic projects, internships, certifications, and relevant coursework. Include personal/open-source projects that demonstrate your skills.',
+        impact: 'Strong project portfolio can compensate for limited experience',
+        keywords: ['projects', 'skills', 'education', 'certifications']
+      });
+    }
+    
+    console.log(`✅ Generated ${suggestions.length} intelligent suggestions based on resume analysis`);
+    return { suggestions, analysis: resumeAnalysis };
+  }
+  
+  // Perform deep analysis of resume content
+  async performDeepResumeAnalysis(resumeText, jobDescription) {
+    const analysis = {
+      content: {},
+      structure: {},
+      ats: {},
+      formatting: {},
+      careerLevel: 'unknown'
+    };
+    
+    const resumeLower = resumeText.toLowerCase();
+    const jobDescLower = jobDescription.toLowerCase();
+    
+    // Content Analysis
+    analysis.content.missingQuantifiableAchievements = !this.hasQuantifiableAchievements(resumeText);
+    analysis.content.weakActionVerbs = this.hasWeakActionVerbs(resumeText);
+    analysis.content.vagueDescriptions = this.hasVagueDescriptions(resumeText);
+    
+    // Structure Analysis
+    analysis.structure.missingSections = this.findMissingSections(resumeText);
+    analysis.structure.poorOrganization = this.hasPoorOrganization(resumeText);
+    
+    // ATS Analysis
+    const atsAnalysis = this.performATSAnalysis(resumeText, jobDescription);
+    analysis.ats = atsAnalysis;
+    
+    // Formatting Analysis
+    analysis.formatting.issues = this.findFormattingIssues(resumeText);
+    
+    // Career Level Detection
+    analysis.careerLevel = this.detectCareerLevel(resumeText);
+    
+    return analysis;
+  }
+  
+  // Check for quantifiable achievements
+  hasQuantifiableAchievements(resumeText) {
+    const quantifierPatterns = [
+      /\d+\s*%/g, // percentages
+      /\$\d+/g, // monetary values
+      /\d+\s*(years?|months?|weeks?)/g, // time periods
+      /\d+\s*(people|users|customers|projects?|teams?)/g, // quantities
+      /(increased|decreased|improved|reduced|grew|saved|generated).*?\d+/gi // achievement verbs with numbers
+    ];
+    
+    let quantifierCount = 0;
+    quantifierPatterns.forEach(pattern => {
+      const matches = resumeText.match(pattern);
+      quantifierCount += matches ? matches.length : 0;
+    });
+    
+    return quantifierCount >= 2; // Need at least 2 quantifiable achievements
+  }
+  
+  // Check for weak action verbs
+  hasWeakActionVerbs(resumeText) {
+    const weakVerbs = ['worked on', 'helped with', 'involved in', 'participated in', 'assisted', 'was responsible for'];
+    const strongVerbs = ['developed', 'implemented', 'optimized', 'led', 'architected', 'delivered', 'created', 'built'];
+    
+    const weakVerbCount = weakVerbs.reduce((count, verb) => {
+      return count + (resumeText.toLowerCase().match(new RegExp(verb, 'g')) || []).length;
+    }, 0);
+    
+    const strongVerbCount = strongVerbs.reduce((count, verb) => {
+      return count + (resumeText.toLowerCase().match(new RegExp(verb, 'g')) || []).length;
+    }, 0);
+    
+    return weakVerbCount > strongVerbCount;
+  }
+  
+  // Check for vague descriptions
+  hasVagueDescriptions(resumeText) {
+    const vagueTerms = ['various', 'several', 'many', 'some', 'different', 'basic', 'simple', 'worked on'];
+    const specificTerms = ['react', 'node.js', 'python', 'javascript', 'mongodb', 'aws', 'docker', 'git'];
+    
+    const vagueCount = vagueTerms.reduce((count, term) => {
+      return count + (resumeText.toLowerCase().match(new RegExp(`\\b${term}\\b`, 'g')) || []).length;
+    }, 0);
+    
+    const specificCount = specificTerms.reduce((count, term) => {
+      return count + (resumeText.toLowerCase().match(new RegExp(`\\b${term}\\b`, 'g')) || []).length;
+    }, 0);
+    
+    return vagueCount > specificCount * 0.5;
+  }
+  
+  // Find missing essential sections
+  findMissingSections(resumeText) {
+    const essentialSections = {
+      'contact': ['email', 'phone', '@'],
+      'experience': ['experience', 'work', 'employment', 'internship'],
+      'education': ['education', 'degree', 'university', 'college'],
+      'skills': ['skills', 'technologies', 'technical', 'programming'],
+      'projects': ['projects', 'portfolio', 'github']
+    };
+    
+    const missingSections = [];
+    const resumeLower = resumeText.toLowerCase();
+    
+    Object.keys(essentialSections).forEach(section => {
+      const keywords = essentialSections[section];
+      const hasSection = keywords.some(keyword => resumeLower.includes(keyword));
+      if (!hasSection) {
+        missingSections.push(section);
+      }
+    });
+    
+    return missingSections;
+  }
+  
+  // Check for poor organization
+  hasPoorOrganization(resumeText) {
+    const lines = resumeText.split('\n').filter(line => line.trim().length > 0);
+    const sectionHeaders = lines.filter(line => 
+      /^[A-Z\s]{2,}$/.test(line.trim()) || 
+      line.trim().endsWith(':') ||
+      /^(experience|education|skills|projects|objective|summary)/i.test(line.trim())
+    );
+    
+    return sectionHeaders.length < 3; // Less than 3 clear section headers indicates poor organization
+  }
+  
+  // Perform ATS analysis
+  performATSAnalysis(resumeText, jobDescription) {
+    const resumeLower = resumeText.toLowerCase();
+    const jobDescLower = jobDescription.toLowerCase();
+    
+    // Extract job keywords
+    const jobWords = jobDescLower.match(/\b\w{3,}\b/g) || [];
+    const uniqueJobWords = [...new Set(jobWords)].filter(word => 
+      !['the', 'and', 'for', 'you', 'will', 'are', 'with', 'have', 'can', 'our', 'this', 'that', 'job', 'role', 'position'].includes(word)
+    );
+    
+    const matchedKeywords = uniqueJobWords.filter(word => resumeLower.includes(word));
+    const keywordGap = Math.round(((uniqueJobWords.length - matchedKeywords.length) / uniqueJobWords.length) * 100);
+    const missingKeywords = uniqueJobWords.filter(word => !resumeLower.includes(word));
+    
+    // Skills analysis
+    const requiredSkills = this.extractRequiredSkills(jobDescription);
+    const resumeSkills = this.extractResumeSkills(resumeText);
+    const skillsMismatch = requiredSkills.filter(skill => 
+      !resumeSkills.some(resumeSkill => resumeSkill.toLowerCase().includes(skill.toLowerCase()))
+    );
+    
+    return {
+      keywordGap,
+      missingKeywords: missingKeywords.slice(0, 15),
+      skillsMismatch: skillsMismatch.slice(0, 10),
+      matchedKeywords: matchedKeywords.length,
+      totalJobKeywords: uniqueJobWords.length
+    };
+  }
+  
+  // Extract required skills from job description
+  extractRequiredSkills(jobDescription) {
+    const skillPatterns = [
+      /\b(javascript|js|react|node\.?js|python|java|sql|html|css|mongodb|mysql|postgresql|aws|azure|docker|kubernetes|git|github)\b/gi,
+      /\b(angular|vue|express|django|flask|spring|hibernate|tensorflow|pytorch|pandas|numpy)\b/gi,
+      /\b(agile|scrum|devops|ci\/cd|jenkins|linux|windows|mac|rest|api|microservices)\b/gi
+    ];
+    
+    const skills = [];
+    skillPatterns.forEach(pattern => {
+      const matches = jobDescription.match(pattern) || [];
+      skills.push(...matches.map(skill => skill.toLowerCase()));
+    });
+    
+    return [...new Set(skills)];
+  }
+  
+  // Extract skills from resume
+  extractResumeSkills(resumeText) {
+    const skillsSection = this.extractSkillsSection(resumeText);
+    const skillWords = skillsSection.toLowerCase().split(/[,\s\n\|\-•]+/).filter(word => word.length > 2);
+    return skillWords;
+  }
+  
+  // Extract skills section from resume
+  extractSkillsSection(resumeText) {
+    const lines = resumeText.split('\n');
+    let skillsStart = -1;
+    let skillsEnd = -1;
+    
+    for (let i = 0; i < lines.length; i++) {
+      if (/^(skills|technical skills|technologies|programming)/i.test(lines[i].trim())) {
+        skillsStart = i;
+        break;
+      }
+    }
+    
+    if (skillsStart !== -1) {
+      for (let i = skillsStart + 1; i < lines.length; i++) {
+        if (/^(experience|education|projects|certifications|objective)/i.test(lines[i].trim())) {
+          skillsEnd = i;
+          break;
+        }
+      }
+      skillsEnd = skillsEnd === -1 ? lines.length : skillsEnd;
+      return lines.slice(skillsStart, skillsEnd).join('\n');
+    }
+    
+    return resumeText; // Return full text if no skills section found
+  }
+  
+  // Find formatting issues
+  findFormattingIssues(resumeText) {
+    const issues = [];
+    
+    // Check for inconsistent bullet points
+    const bulletPatterns = [/^[•\-\*]/, /^\d+\./, /^→/, /^◦/];
+    const bulletCounts = bulletPatterns.map(pattern => 
+      (resumeText.match(new RegExp(pattern.source, 'gm')) || []).length
+    );
+    if (bulletCounts.filter(count => count > 0).length > 2) {
+      issues.push('inconsistent bullet points');
+    }
+    
+    // Check for missing contact info
+    if (!/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/.test(resumeText)) {
+      issues.push('missing email address');
+    }
+    
+    if (!/[\+]?[1-9]?[\d\s\-\(\)]{8,15}/.test(resumeText)) {
+      issues.push('missing phone number');
+    }
+    
+    // Check for excessive line breaks
+    if (/\n\n\n+/.test(resumeText)) {
+      issues.push('excessive spacing');
+    }
+    
+    return issues;
+  }
+  
+  // Detect career level
+  detectCareerLevel(resumeText) {
+    const resumeLower = resumeText.toLowerCase();
+    
+    // Check for experience indicators
+    const seniorIndicators = ['senior', 'lead', 'principal', 'manager', 'director', 'years experience'];
+    const midIndicators = ['experience', '2-5 years', '3-7 years', 'professional'];
+    const juniorIndicators = ['intern', 'fresher', 'graduate', 'entry level', 'recent graduate'];
+    
+    if (seniorIndicators.some(indicator => resumeLower.includes(indicator))) {
+      return 'senior-level';
+    } else if (midIndicators.some(indicator => resumeLower.includes(indicator))) {
+      return 'mid-level';
+    } else if (juniorIndicators.some(indicator => resumeLower.includes(indicator))) {
+      return 'entry-level';
+    }
+    
+    // Check based on content complexity
+    const projectCount = (resumeLower.match(/project/g) || []).length;
+    const internshipCount = (resumeLower.match(/intern/g) || []).length;
+    
+    if (projectCount > 3 && internshipCount === 0) {
+      return 'mid-level';
+    } else if (internshipCount > 0 || projectCount <= 2) {
+      return 'entry-level';
+    }
+    
+    return 'entry-level';
+  }
+  
+  // Generate role-specific suggestions
+  async generateRoleSpecificSuggestions(analysis, jobRole, jobDescription) {
+    const suggestions = [];
+    
+    switch (jobRole) {
+      case 'software engineer':
+      case 'software developer':
+        suggestions.push({
+          category: 'Technical Focus',
+          priority: 'HIGH',
+          title: 'Highlight Software Development Skills',
+          issue: 'Need stronger emphasis on programming and development experience',
+          suggestion: 'Emphasize your coding projects, programming languages, frameworks, and software architecture experience. Include GitHub links and mention development methodologies like Agile/Scrum.',
+          impact: 'Technical emphasis increases relevance for software roles by 70%',
+          keywords: ['programming', 'development', 'coding', 'software architecture']
+        });
+        break;
+        
+      case 'data scientist':
+      case 'data analyst':
+        suggestions.push({
+          category: 'Data Focus',
+          priority: 'HIGH',
+          title: 'Strengthen Data Science Portfolio',
+          issue: 'Insufficient emphasis on data analysis and machine learning',
+          suggestion: 'Highlight your experience with data analysis tools (Python, R, SQL), machine learning libraries (TensorFlow, scikit-learn), and data visualization. Include specific data projects with measurable outcomes.',
+          impact: 'Data-focused content increases match for analytics roles by 85%',
+          keywords: ['data analysis', 'machine learning', 'python', 'sql', 'visualization']
+        });
+        break;
+        
+      case 'web developer':
+        suggestions.push({
+          category: 'Web Development',
+          priority: 'HIGH',
+          title: 'Showcase Web Development Expertise',
+          issue: 'Missing web-specific technologies and frameworks',
+          suggestion: 'Emphasize frontend/backend technologies (React, Vue, Node.js, Express), responsive design, and web performance optimization. Include live project links and mention modern development practices.',
+          impact: 'Web-focused skills increase relevance for web developer roles by 80%',
+          keywords: ['web development', 'frontend', 'backend', 'responsive design']
+        });
+        break;
+    }
+    
+    return suggestions;
   }
 
   // Generate optimized resume

@@ -17,6 +17,49 @@ const resumeSchema = new mongoose.Schema({
   jobRole: { type: String, default: 'Professional' }, // Detected job role
   photoPath: { type: String, default: null }, // Path to uploaded photo
   
+  // Professional ATS Analysis System (Enterprise-Grade)
+  professionalATSAnalysis: {
+    overallATSScore: { type: Number, default: 0, min: 0, max: 100 },
+    content: {
+      score: { type: Number, default: 0 },
+      parseRate: { type: Number, default: 0 },
+      quantification: { type: Number, default: 0 },
+      repetition: { type: Number, default: 0 },
+      grammar: { type: Number, default: 0 }
+    },
+    sections: {
+      score: { type: Number, default: 0 },
+      essentialSections: { type: mongoose.Schema.Types.Mixed, default: {} },
+      contactInfo: { type: mongoose.Schema.Types.Mixed, default: {} }
+    },
+    atsEssentials: {
+      score: { type: Number, default: 0 },
+      format: { type: Number, default: 0 },
+      design: { type: Number, default: 0 },
+      email: { type: Number, default: 0 },
+      hyperlinks: { type: Number, default: 0 }
+    },
+    tailoring: {
+      score: { type: Number, default: 0 },
+      hardSkills: { type: mongoose.Schema.Types.Mixed, default: {} },
+      softSkills: { type: mongoose.Schema.Types.Mixed, default: {} },
+      actionVerbs: { type: mongoose.Schema.Types.Mixed, default: {} },
+      tailoredTitle: { type: mongoose.Schema.Types.Mixed, default: {} }
+    }
+  },
+
+  // 4-Factor Enhanced Scoring System (Legacy Support)
+  enhancedScoring: {
+    atsScore: { type: Number, default: 0, min: 0, max: 100 },
+    skillsMatch: { type: Number, default: 0, min: 0, max: 100 },
+    contentQuality: { type: Number, default: 0, min: 0, max: 100 },
+    formatScore: { type: Number, default: 0, min: 0, max: 100 },
+    overallScore: { type: Number, default: 0, min: 0, max: 100 },
+    // Additional ATS insights
+    keywordMatchPercentage: { type: Number, default: 0 },
+    quantifiableAchievements: { type: Number, default: 0 }
+  },
+  
   // Metadata
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now }
