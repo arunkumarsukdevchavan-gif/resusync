@@ -1,175 +1,321 @@
 import React, { useState, useRef } from 'react';
 
-const FileUpload = ({ file, setFile, resumeText, setResumeText }) => {
+const FileUpload = ({ 
+  file, 
+  resumeText, 
+  setResumeText, 
+  handleFileChange, 
+  handleDragOver, 
+  handleDragEnter, 
+  handleDrop 
+}) => {
   const [isDragOver, setIsDragOver] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState(0);
-  const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef(null);
 
-  const handleDragOver = (e) => {
+  const handleLocalDragOver = (e) => {
     e.preventDefault();
     setIsDragOver(true);
+    if (handleDragOver) handleDragOver(e);
   };
 
-  const handleDragLeave = (e) => {
+  const handleLocalDragLeave = (e) => {
     e.preventDefault();
     setIsDragOver(false);
   };
 
-  const handleDrop = (e) => {
+  const handleLocalDrop = (e) => {
     e.preventDefault();
     setIsDragOver(false);
-    
-    const files = e.dataTransfer.files;
-    if (files.length > 0) {
-      handleFileSelect(files[0]);
-    }
-  };
-
-  const handleFileSelect = (selectedFile) => {
-    if (selectedFile && selectedFile.type === 'application/pdf') {
-      setFile(selectedFile);
-      simulateUpload();
-    } else {
-      alert('Please select a PDF file.');
-    }
-  };
-
-  const simulateUpload = () => {
-    setIsUploading(true);
-    setUploadProgress(0);
-    
-    const interval = setInterval(() => {
-      setUploadProgress(prev => {
-        if (prev >= 100) {
-          clearInterval(interval);
-          setIsUploading(false);
-          return 100;
-        }
-        return prev + 10;
-      });
-    }, 100);
+    if (handleDrop) handleDrop(e);
   };
 
   const handleFileInputChange = (e) => {
-    const selectedFile = e.target.files[0];
-    if (selectedFile) {
-      handleFileSelect(selectedFile);
+    // Prevent double triggering with multiple checks
+    if (!e.target || e.target !== fileInputRef.current) {
+      console.log('Ignoring file change from wrong target');
+      return;
+    }
+    
+    // Prevent processing if files are the same as current
+    if (e.target.files[0] === file) {
+      console.log('Same file selected, ignoring');
+      return;
+    }
+    
+    console.log('FileUpload: Processing file change');
+    if (handleFileChange) {
+      handleFileChange(e);
     }
   };
 
   const removeFile = () => {
-    setFile(null);
-    setUploadProgress(0);
-    setIsUploading(false);
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
+    // Clear file by triggering change event with empty file
+    const event = { target: { files: [] } };
+    if (handleFileChange) handleFileChange(event);
   };
 
   return (
-    <div className="space-y-6">
-      {/* File Upload Section */}
-      <div className="space-y-4">
-        <label className="block text-sm font-medium text-gray-700">
-          Upload Resume (PDF format)
-        </label>
+    <div style={{
+      background: 'rgba(255, 255, 255, 0.1)',
+      backdropFilter: 'blur(15px)',
+      border: '2px solid rgba(255, 255, 255, 0.2)',
+      borderRadius: '20px',
+      padding: '30px',
+      marginBottom: '25px'
+    }}>
+      {/* Main Upload Area */}
+      <div>
+        <h4 style={{
+          color: 'rgba(255, 255, 255, 0.9)',
+          fontSize: '18px',
+          fontWeight: '600',
+          marginBottom: '20px',
+          textAlign: 'center'
+        }}>
+          📂 Upload Your Resume
+        </h4>
         
         <div
-          className={`relative border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
-            isDragOver
-              ? 'border-blue-400 bg-blue-50'
-              : file
-              ? 'border-green-400 bg-green-50'
-              : 'border-gray-300 hover:border-gray-400'
-          }`}
-          onDragOver={handleDragOver}
-          onDragLeave={handleDragLeave}
-          onDrop={handleDrop}
+          style={{
+            border: `3px dashed ${isDragOver ? 'rgba(255, 255, 255, 0.6)' : 'rgba(255, 255, 255, 0.3)'}`,
+            borderRadius: '15px',
+            padding: '40px 20px',
+            textAlign: 'center',
+            background: isDragOver ? 'rgba(255, 255, 255, 0.05)' : 'transparent',
+            transition: 'all 0.3s ease',
+            cursor: 'pointer',
+            position: 'relative'
+          }}
+          onDragOver={handleLocalDragOver}
+          onDragEnter={handleDragEnter}
+          onDragLeave={handleLocalDragLeave}
+          onDrop={handleLocalDrop}
+          onClick={() => fileInputRef.current?.click()}
         >
           {!file ? (
             <>
-              <svg
-                className="mx-auto h-12 w-12 text-gray-400"
-                stroke="currentColor"
-                fill="none"
-                viewBox="0 0 48 48"
-              >
-                <path
-                  d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02"
-                  strokeWidth={2}
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
-              <div className="mt-4">
-                <p className="text-lg font-medium text-gray-900">
-                  {isDragOver ? 'Drop your resume here' : 'Drag and drop your resume'}
-                </p>
-                <p className="text-sm text-gray-500 mt-1">or click to browse files</p>
+              <div style={{
+                fontSize: '48px',
+                marginBottom: '20px',
+                opacity: isDragOver ? 1 : 0.7,
+                transition: 'opacity 0.3s ease'
+              }}>
+                {isDragOver ? '⬇️' : '📎'}
               </div>
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept=".pdf"
-                onChange={handleFileInputChange}
-                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-              />
+              <h3 style={{
+                color: 'white',
+                fontSize: '20px',
+                fontWeight: '600',
+                marginBottom: '10px'
+              }}>
+                {isDragOver ? 'Drop your resume here' : 'Choose your resume file'}
+              </h3>
+              <p style={{
+                color: 'rgba(255, 255, 255, 0.7)',
+                fontSize: '14px',
+                marginBottom: '20px'
+              }}>
+                Drag & drop or click to browse
+              </p>
+              <div style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '8px',
+                background: 'rgba(255, 255, 255, 0.1)',
+                padding: '8px 16px',
+                borderRadius: '20px',
+                fontSize: '12px',
+                color: 'rgba(255, 255, 255, 0.8)'
+              }}>
+                📋 Supports: PDF, DOC, DOCX, TXT
+              </div>
             </>
           ) : (
-            <div className="space-y-4">
-              <div className="flex items-center justify-center space-x-2">
-                <svg className="h-8 w-8 text-green-500" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                </svg>
-                <span className="text-lg font-medium text-gray-900">{file.name}</span>
-              </div>
-              
-              {isUploading && (
-                <div className="space-y-2">
-                  <div className="w-full bg-gray-200 rounded-full h-2">
-                    <div
-                      className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-                      style={{ width: `${uploadProgress}%` }}
-                    ></div>
-                  </div>
-                  <p className="text-sm text-gray-500">Uploading... {uploadProgress}%</p>
-                </div>
-              )}
-              
-              {!isUploading && (
-                <button
-                  onClick={removeFile}
-                  className="text-red-600 hover:text-red-700 text-sm font-medium"
-                >
-                  Remove file
-                </button>
-              )}
+            <div style={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              gap: '15px'
+            }}>
+              <div style={{ fontSize: '48px' }}>✅</div>
+              <h3 style={{
+                color: 'white',
+                fontSize: '18px',
+                fontWeight: '600',
+                margin: 0
+              }}>
+                {file.name}
+              </h3>
+              <p style={{
+                color: 'rgba(255, 255, 255, 0.7)',
+                fontSize: '14px',
+                margin: 0
+              }}>
+                File ready for analysis
+              </p>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  removeFile();
+                }}
+                style={{
+                  background: 'rgba(255, 255, 255, 0.1)',
+                  border: '1px solid rgba(255, 255, 255, 0.3)',
+                  borderRadius: '8px',
+                  padding: '8px 16px',
+                  color: 'rgba(255, 255, 255, 0.9)',
+                  fontSize: '12px',
+                  cursor: 'pointer',
+                  transition: 'all 0.3s ease'
+                }}
+                onMouseEnter={(e) => {
+                  e.target.style.background = 'rgba(255, 255, 255, 0.2)';
+                }}
+                onMouseLeave={(e) => {
+                  e.target.style.background = 'rgba(255, 255, 255, 0.1)';
+                }}
+              >
+                🗑️ Remove File
+              </button>
             </div>
           )}
+          
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".pdf,.doc,.docx,.txt"
+            onChange={handleFileInputChange}
+            style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              width: '100%',
+              height: '100%',
+              opacity: 0,
+              cursor: 'pointer',
+              pointerEvents: file ? 'none' : 'auto' // Disable when file is selected
+            }}
+          />
         </div>
       </div>
 
-      {/* Text Input Alternative */}
-      <div className="space-y-4">
-        <div className="flex items-center">
-          <div className="flex-1 border-t border-gray-300"></div>
-          <div className="px-4 text-sm text-gray-500 font-medium">OR</div>
-          <div className="flex-1 border-t border-gray-300"></div>
-        </div>
+      {/* OR Divider */}
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        margin: '30px 0 20px 0'
+      }}>
+        <div style={{
+          flex: 1,
+          height: '1px',
+          background: 'rgba(255, 255, 255, 0.2)'
+        }}></div>
+        <span style={{
+          color: 'rgba(255, 255, 255, 0.6)',
+          fontSize: '14px',
+          fontWeight: '500',
+          padding: '0 15px'
+        }}>
+          OR
+        </span>
+        <div style={{
+          flex: 1,
+          height: '1px',
+          background: 'rgba(255, 255, 255, 0.2)'
+        }}></div>
+      </div>
+
+      {/* Text Input Area - Smaller Box */}
+      <div>
+        <h4 style={{
+          color: 'rgba(255, 255, 255, 0.9)',
+          fontSize: '16px',
+          fontWeight: '600',
+          marginBottom: '15px',
+          textAlign: 'center'
+        }}>
+          ✏️ Paste Your Resume Content
+        </h4>
         
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Paste Resume Text
-          </label>
-          <textarea
-            value={resumeText}
-            onChange={(e) => setResumeText(e.target.value)}
-            placeholder="Paste your resume content here..."
-            rows={8}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
-          />
-        </div>
+        <textarea
+          value={resumeText}
+          onChange={(e) => setResumeText(e.target.value)}
+          placeholder="Paste your complete resume content here..."
+          style={{
+            width: '100%',
+            minHeight: '120px',
+            background: 'rgba(255, 255, 255, 0.08)',
+            border: '2px solid rgba(255, 255, 255, 0.2)',
+            borderRadius: '12px',
+            padding: '15px',
+            color: 'white',
+            fontSize: '14px',
+            fontFamily: "'Inter', sans-serif",
+            resize: 'vertical',
+            outline: 'none',
+            transition: 'all 0.3s ease'
+          }}
+          onFocus={(e) => {
+            e.target.style.borderColor = 'rgba(255, 255, 255, 0.4)';
+            e.target.style.background = 'rgba(255, 255, 255, 0.12)';
+          }}
+          onBlur={(e) => {
+            e.target.style.borderColor = 'rgba(255, 255, 255, 0.2)';
+            e.target.style.background = 'rgba(255, 255, 255, 0.08)';
+          }}
+        />
+        
+        {resumeText.length > 0 && (
+          <div style={{
+            marginTop: '10px',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center'
+          }}>
+            <span style={{
+              color: 'rgba(255, 255, 255, 0.6)',
+              fontSize: '12px'
+            }}>
+              {resumeText.length} characters
+            </span>
+            <button
+              onClick={() => setResumeText('')}
+              style={{
+                background: 'rgba(255, 255, 255, 0.1)',
+                border: '1px solid rgba(255, 255, 255, 0.3)',
+                borderRadius: '6px',
+                padding: '4px 8px',
+                color: 'rgba(255, 255, 255, 0.9)',
+                fontSize: '11px',
+                cursor: 'pointer',
+                transition: 'all 0.3s ease'
+              }}
+            >
+              Clear
+            </button>
+          </div>
+        )}
+      </div>
+      
+      <div style={{
+        marginTop: '20px',
+        padding: '12px',
+        background: 'rgba(255, 255, 255, 0.05)',
+        borderRadius: '10px',
+        border: '1px solid rgba(255, 255, 255, 0.1)'
+      }}>
+        <p style={{
+          color: 'rgba(255, 255, 255, 0.7)',
+          fontSize: '12px',
+          margin: 0,
+          textAlign: 'center',
+          lineHeight: '1.4'
+        }}>
+          💡 <strong>Pro Tip:</strong> For best results, include contact info, work experience, education, and skills.
+        </p>
       </div>
     </div>
   );

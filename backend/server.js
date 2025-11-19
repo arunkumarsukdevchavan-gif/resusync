@@ -38,6 +38,7 @@ app.get('/api/health', (req, res) => {
 });
 
 const PORT=process.env.PORT||5001;
+const HOST = process.env.HOST || '0.0.0.0';
 
 // MongoDB connection
 mongoose.connect(process.env.MONGODB_URI,{useNewUrlParser:true,useUnifiedTopology:true})
@@ -47,4 +48,25 @@ mongoose.connect(process.env.MONGODB_URI,{useNewUrlParser:true,useUnifiedTopolog
   })
   .catch(e => console.error(e));
 
-app.listen(PORT,() => console.log('Server running on',PORT));
+const server = app.listen(PORT, HOST, () => {
+  console.log('Server running on', PORT);
+  console.log('Bound host:', HOST);
+  console.log('Server listening on:', server.address());
+});
+
+server.on('error', (err) => {
+  console.error('Server error:', err);
+});
+
+// Handle unhandled promise rejections
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+  console.error('Stack trace:', reason?.stack);
+});
+
+// Handle uncaught exceptions
+process.on('uncaughtException', (error) => {
+  console.error('Uncaught Exception:', error);
+  console.error('Stack trace:', error.stack);
+  process.exit(1);
+});

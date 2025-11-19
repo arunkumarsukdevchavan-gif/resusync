@@ -7,14 +7,25 @@ const path=require('path');
 const Resume=require('../models/Resume');
 const LocalResumeAI = require('../ai/localModel');
 const enhancedAI = require('../ai/index');
-const PDFGenerator = require('../services/pdfGenerator');
 const dotenv=require('dotenv');
 dotenv.config();
 
-// Configure multer for file uploads (resume and photo)
-const upload=multer({
-  dest:'./uploads/',
+// Configure multer for file uploads (resume and photo) with enhanced error handling
+const upload = multer({
+  dest: './uploads/',
+  limits: {
+    fileSize: 10 * 1024 * 1024, // 10MB limit
+    files: 2 // Maximum 2 files (resume + photo)
+  },
   fileFilter: (req, file, cb) => {
+    console.log('Multer processing file:', {
+      fieldname: file.fieldname,
+      originalname: file.originalname,
+      mimetype: file.mimetype,
+      size: file.size,
+      timestamp: new Date().toISOString()
+    });
+    
     if (file.fieldname === 'resume') {
       // Accept PDF, DOC, DOCX, and TXT files for resume
       const allowedMimeTypes = [
@@ -26,26 +37,59 @@ const upload=multer({
       
       if (allowedMimeTypes.includes(file.mimetype) || 
           file.originalname.match(/\.(pdf|doc|docx|txt)$/i)) {
+        console.log('✅ Resume file accepted:', file.originalname);
         cb(null, true);
       } else {
+        console.log('❌ Resume file rejected:', file.originalname, file.mimetype);
         cb(new Error('Only PDF, DOC, DOCX, and TXT files are allowed for resume'), false);
       }
     } else if (file.fieldname === 'photo') {
       // Accept image files for photo
       if (file.mimetype.startsWith('image/')) {
+        console.log('✅ Photo file accepted:', file.originalname);
         cb(null, true);
       } else {
+        console.log('❌ Photo file rejected:', file.originalname, file.mimetype);
         cb(new Error('Only image files are allowed for photo'), false);
       }
     } else {
-      cb(null, true);
+      console.log('⚠️  Unknown field name:', file.fieldname, '- allowing through');
+      cb(null, false); // Reject unknown fields instead of allowing
     }
   }
 });
 
-// Initialize Local AI Model and PDF Generator
+// Initialize Local AI Model
 const localAI = new LocalResumeAI();
-const pdfGenerator = new PDFGenerator();
+
+// Lazy instantiation of PDF generator to prevent server crashes
+let pdfGenerator = null;
+const getPDFGenerator = () => {
+  if (!pdfGenerator) {
+    const PDFGenerator = require('../services/pdfGenerator');
+    pdfGenerator = new PDFGenerator();
+  }
+  return pdfGenerator;
+};
+
+// Helper functions for extracting contact information
+const extractPhone = (text) => {
+  const phoneRegex = /(\+?\d{1,3}[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}/;
+  const match = text.match(phoneRegex);
+  return match ? match[0] : null;
+};
+
+const extractLinkedIn = (text) => {
+  const linkedinRegex = /linkedin\.com\/in\/[\w-]+/i;
+  const match = text.match(linkedinRegex);
+  return match ? `https://${match[0]}` : null;
+};
+
+const extractGitHub = (text) => {
+  const githubRegex = /github\.com\/[\w-]+/i;
+  const match = text.match(githubRegex);
+  return match ? `https://${match[0]}` : null;
+};
 
 // Test endpoint
 router.get('/test', (req, res) => {
@@ -98,19 +142,92 @@ async function extractText(file){
   }
 }
 
+// Middleware to handle multer errors
+const handleMulterError = (err, req, res, next) => {
+  if (err instanceof multer.MulterError) {
+    console.log('Multer error:', err.code, err.message);
+    if (err.code === 'LIMIT_FILE_SIZE') {
+      return res.status(400).json({
+        success: false,
+        message: 'File too large. Maximum size is 10MB.'
+      });
+    } else if (err.code === 'LIMIT_FILE_COUNT') {
+      return res.status(400).json({
+        success: false,
+        message: 'Too many files. Maximum 2 files allowed.'
+      });
+    } else if (err.code === 'LIMIT_UNEXPECTED_FILE') {
+      return res.status(400).json({
+        success: false,
+        message: 'Unexpected file field. Only "resume" and "photo" fields are allowed.'
+      });
+    }
+    return res.status(400).json({
+      success: false,
+      message: `Upload error: ${err.message}`
+    });
+  } else if (err) {
+    console.log('File filter error:', err.message);
+    return res.status(400).json({
+      success: false,
+      message: err.message
+    });
+  }
+  next();
+};
+
+// Request deduplication cache
+const recentRequests = new Map();
+const REQUEST_TIMEOUT = 5000; // 5 seconds
+
+// Cleanup old requests periodically
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, timestamp] of recentRequests.entries()) {
+    if (now - timestamp > REQUEST_TIMEOUT) {
+      recentRequests.delete(key);
+    }
+  }
+}, 10000); // Cleanup every 10 seconds
+
 // POST /api/resume/analyze - Enhanced with photo upload support
 router.post('/analyze', upload.fields([
   { name: 'resume', maxCount: 1 },
   { name: 'photo', maxCount: 1 }
-]), async (req, res) => {
+]), handleMulterError, async (req, res) => {
   try {
+    console.log('=== ANALYZE REQUEST RECEIVED ===');
+    console.log('Request body keys:', Object.keys(req.body));
+    console.log('Request files:', req.files ? Object.keys(req.files) : 'No files');
+    
+    // Extract request data
     const { name, email, jobDescription, resumeText } = req.body;
+    
+    // Create request fingerprint for deduplication
+    const requestFingerprint = `${name}_${email}_${jobDescription?.substring(0, 100)}_${req.files?.resume?.[0]?.originalname || 'no-file'}`;
+    const requestTime = Date.now();
+    
+    // Check for duplicate request
+    if (recentRequests.has(requestFingerprint)) {
+      const lastRequestTime = recentRequests.get(requestFingerprint);
+      if (requestTime - lastRequestTime < REQUEST_TIMEOUT) {
+        console.log('⚠️  Duplicate request detected, ignoring');
+        return res.status(429).json({
+          success: false,
+          message: 'Duplicate request detected. Please wait before submitting again.'
+        });
+      }
+    }
+    
+    // Record this request
+    recentRequests.set(requestFingerprint, requestTime);
     
     let originalText = '';
     let photoPath = null;
 
     // Extract text from uploaded PDF resume if provided
     if (req.files && req.files.resume && req.files.resume[0]) {
+      console.log('Processing uploaded resume file:', req.files.resume[0].originalname);
       try {
         const buffer = fs.readFileSync(req.files.resume[0].path);
         const data = await pdf(buffer);
@@ -129,21 +246,27 @@ router.post('/analyze', upload.fields([
         originalText = resumeText || '';
       }
     } else if (resumeText) {
+      console.log('Using provided resume text, length:', resumeText.length);
       originalText = resumeText;
     }
 
     // Handle photo if uploaded
     if (req.files && req.files.photo && req.files.photo[0]) {
       photoPath = req.files.photo[0].path;
+      console.log('Photo uploaded:', req.files.photo[0].originalname);
     }
 
-    // Combine all text inputs
-    originalText = (originalText || '') + '\n' + (resumeText || '');
+    // Only add resumeText if no file was uploaded to avoid duplication
+    if (!req.files?.resume && resumeText && originalText !== resumeText) {
+      originalText = originalText || resumeText;
+    }
 
-    console.log('Processing request for:', name, email);
-    console.log('Job description length:', jobDescription.length);
-    console.log('Resume text length:', originalText.length);
-    console.log('Photo uploaded:', !!photoPath);
+    console.log('Final processing summary:');
+    console.log('- Name:', name);
+    console.log('- Email:', email);
+    console.log('- Job description length:', jobDescription?.length || 0);
+    console.log('- Resume text length:', originalText?.length || 0);
+    console.log('- Photo uploaded:', !!photoPath);
 
     // Validate inputs
     if (!name || !email || !jobDescription || !originalText) {
@@ -403,7 +526,8 @@ router.post('/download-pdf/:id', async (req, res) => {
     console.log('Include photo:', !!resumeData.photoPath);
 
     // Generate PDF using the PDF generator service
-    const pdfBuffer = await pdfGenerator.generateResume(resumeData, includePhoto);
+    const generator = getPDFGenerator();
+    const pdfBuffer = await generator.generateResume(resumeData, includePhoto);
 
     // Set response headers for file download
     const documentType = type === 'cover' ? 'CoverLetter' : 'Resume';
@@ -466,7 +590,8 @@ router.get('/preview-pdf/:id', async (req, res) => {
     };
 
     // Generate PDF using the PDF generator service
-    const pdfBuffer = await pdfGenerator.generateResume(resumeData, includePhoto === 'true');
+    const generator = getPDFGenerator();
+    const pdfBuffer = await generator.generateResume(resumeData, includePhoto === 'true');
 
     // Set response headers for inline viewing
     res.setHeader('Content-Type', 'application/pdf');
@@ -481,6 +606,308 @@ router.get('/preview-pdf/:id', async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Failed to preview PDF: ' + error.message
+    });
+  }
+});
+
+// POST /api/resume/download-pdf - Generate and download customized resume as PDF
+router.post('/download-pdf', async (req, res) => {
+  try {
+    console.log('PDF download request received:', req.body);
+    const { resumeId, resumeText, name, email } = req.body;
+    
+    let resumeData;
+    
+    if (resumeId) {
+      // Get resume from database
+      const resume = await Resume.findById(resumeId);
+      if (!resume) {
+        return res.status(404).json({
+          success: false,
+          message: 'Resume not found'
+        });
+      }
+      
+      resumeData = {
+        name: resume.name,
+        email: resume.email,
+        content: resume.generatedResume, // PDF generator expects 'content' property
+        personalInfo: typeof resume.personalInfo === 'string' ? 
+          JSON.parse(resume.personalInfo) : resume.personalInfo
+      };
+    } else if (resumeText && name && email) {
+      // Use provided data - enhanced with contact extraction
+      console.log('Using provided resume data for PDF generation');
+      
+      // Extract contact information from text
+      const extractedPhone = extractPhone(resumeText);
+      const extractedLinkedIn = extractLinkedIn(resumeText);
+      const extractedGitHub = extractGitHub(resumeText);
+      
+      resumeData = {
+        name,
+        email,
+        content: resumeText, // PDF generator expects 'content' property
+        personalInfo: { 
+          name, 
+          email,
+          phone: extractedPhone,
+          linkedin: extractedLinkedIn,
+          github: extractedGitHub
+        }
+      };
+      console.log('PDF data prepared with contact info:', {
+        name: resumeData.name,
+        email: resumeData.email,
+        extractedInfo: {
+          phone: extractedPhone,
+          linkedin: extractedLinkedIn,
+          github: extractedGitHub
+        }
+      });
+    } else {
+      console.log('Missing required fields for PDF generation');
+      return res.status(400).json({
+        success: false,
+        message: 'Either resumeId or resumeText with name/email is required'
+      });
+    }
+
+    console.log('Starting PDF generation for preview:', resumeData.name);
+    
+    // Generate PDF with lazy instantiation
+    const generator = getPDFGenerator();
+    const pdfBuffer = await generator.generateResume(resumeData);
+    
+    if (!pdfBuffer || pdfBuffer.length === 0) {
+      throw new Error('PDF generation returned empty buffer');
+    }
+    
+    // Set headers for PDF download
+    const filename = `${resumeData.name.replace(/\s+/g, '_')}_Resume.pdf`;
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.setHeader('Content-Length', pdfBuffer.length);
+    
+    // Send PDF
+    res.send(pdfBuffer);
+    
+    console.log('PDF generated and sent successfully, size:', pdfBuffer.length, 'bytes');
+    
+  } catch (error) {
+    console.error('Error generating PDF:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to generate PDF: ' + error.message
+    });
+  }
+});
+
+// POST /api/resume/preview-pdf - Generate PDF preview as base64
+router.post('/preview-pdf', async (req, res) => {
+  try {
+    const { resumeId, resumeText, name, email } = req.body;
+    
+    let resumeData;
+    
+    if (resumeId) {
+      // Get resume from database
+      const resume = await Resume.findById(resumeId);
+      if (!resume) {
+        return res.status(404).json({
+          success: false,
+          message: 'Resume not found'
+        });
+      }
+      
+      resumeData = {
+        name: resume.name,
+        email: resume.email,
+        content: resume.generatedResume, // PDF generator expects 'content' property
+        personalInfo: typeof resume.personalInfo === 'string' ? 
+          JSON.parse(resume.personalInfo) : resume.personalInfo
+      };
+    } else if (resumeText && name && email) {
+      // Use provided data
+      resumeData = {
+        name,
+        email,
+        content: resumeText, // PDF generator expects 'content' property
+        personalInfo: { name, email }
+      };
+    } else {
+      return res.status(400).json({
+        success: false,
+        message: 'Either resumeId or resumeText with name/email is required'
+      });
+    }
+
+    console.log('Generating PDF preview for:', resumeData.name);
+    
+    // Generate PDF
+    const generator = getPDFGenerator();
+    const pdfBuffer = await generator.generateResume(resumeData);
+    
+    // Convert to base64 for preview
+    const pdfBase64 = pdfBuffer.toString('base64');
+    
+    res.json({
+      success: true,
+      data: {
+        pdfPreview: `data:application/pdf;base64,${pdfBase64}`,
+        filename: `${resumeData.name.replace(/\s+/g, '_')}_Resume.pdf`
+      }
+    });
+    
+    console.log('PDF preview generated successfully');
+    
+  } catch (error) {
+    console.error('Error generating PDF preview:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to generate PDF preview: ' + error.message
+    });
+  }
+});
+
+// POST /api/resume/preview-cover - Generate cover letter PDF preview
+router.post('/preview-cover', async (req, res) => {
+  try {
+    const { resumeId, resumeText, name, email, jobDescription } = req.body;
+    
+    let coverLetterData;
+    
+    if (resumeId) {
+      // Fetch from database
+      const resume = await Resume.findById(resumeId);
+      if (!resume) {
+        return res.status(404).json({
+          success: false,
+          message: 'Resume not found'
+        });
+      }
+      
+      coverLetterData = {
+        name: resume.name,
+        email: resume.email,
+        content: resume.coverLetter || 'Cover letter not available',
+        personalInfo: { name: resume.name, email: resume.email, contact: resume.contact }
+      };
+    } else if (resumeText && name && email && jobDescription) {
+      // Generate cover letter from provided data
+      const personalInfo = await localAI.extractPersonalInformation(resumeText);
+      personalInfo.name = name;
+      personalInfo.email = email;
+      
+      const coverLetter = await localAI.generateCoverLetter(resumeText, jobDescription, personalInfo);
+      
+      coverLetterData = {
+        name,
+        email,
+        content: coverLetter,
+        personalInfo
+      };
+    } else {
+      return res.status(400).json({
+        success: false,
+        message: 'Either resumeId or resumeText with name/email/jobDescription is required'
+      });
+    }
+
+    console.log('Starting cover letter PDF generation for:', coverLetterData.name);
+    
+    // Generate PDF with lazy instantiation
+    const generator = getPDFGenerator();
+    const pdfBuffer = await generator.generateCoverLetter(coverLetterData);
+    
+    // Convert to base64 for preview
+    const pdfBase64 = pdfBuffer.toString('base64');
+    
+    res.json({
+      success: true,
+      data: {
+        pdfPreview: `data:application/pdf;base64,${pdfBase64}`,
+        filename: `${coverLetterData.name.replace(/\s+/g, '_')}_Cover_Letter.pdf`
+      }
+    });
+    
+    console.log('Cover letter PDF preview generated successfully');
+    
+  } catch (error) {
+    console.error('Error generating cover letter PDF preview:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to generate cover letter PDF preview: ' + error.message
+    });
+  }
+});
+
+// POST /api/resume/download-cover - Download cover letter as PDF
+router.post('/download-cover', async (req, res) => {
+  try {
+    const { resumeId, resumeText, name, email, jobDescription } = req.body;
+    
+    let coverLetterData;
+    
+    if (resumeId) {
+      // Fetch from database
+      const resume = await Resume.findById(resumeId);
+      if (!resume) {
+        return res.status(404).json({
+          success: false,
+          message: 'Resume not found'
+        });
+      }
+      
+      coverLetterData = {
+        name: resume.name,
+        email: resume.email,
+        content: resume.coverLetter || 'Cover letter not available',
+        personalInfo: { name: resume.name, email: resume.email, contact: resume.contact }
+      };
+    } else if (resumeText && name && email && jobDescription) {
+      // Generate cover letter from provided data
+      const personalInfo = await localAI.extractPersonalInformation(resumeText);
+      personalInfo.name = name;
+      personalInfo.email = email;
+      
+      const coverLetter = await localAI.generateCoverLetter(resumeText, jobDescription, personalInfo);
+      
+      coverLetterData = {
+        name,
+        email,
+        content: coverLetter,
+        personalInfo
+      };
+    } else {
+      return res.status(400).json({
+        success: false,
+        message: 'Either resumeId or resumeText with name/email/jobDescription is required'
+      });
+    }
+
+    console.log('Generating cover letter PDF download for:', coverLetterData.name);
+    
+    // Generate PDF
+    const generator = getPDFGenerator();
+    const pdfBuffer = await generator.generateCoverLetter(coverLetterData);
+    
+    // Set headers for file download
+    const filename = `${coverLetterData.name.replace(/\s+/g, '_')}_Cover_Letter.pdf`;
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.setHeader('Content-Length', pdfBuffer.length);
+    
+    // Send the PDF
+    res.send(pdfBuffer);
+    
+    console.log('Cover letter PDF download sent successfully');
+    
+  } catch (error) {
+    console.error('Error downloading cover letter PDF:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to download cover letter PDF: ' + error.message
     });
   }
 });

@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Client-Side PDF Generation</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+        button {
+            background: #2563eb;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #1d4ed8;
+        }
+        textarea {
+            width: 100%;
+            height: 200px;
+            margin: 10px 0;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+        .result {
+            margin: 10px 0;
+            padding: 10px;
+            background: #f0f9ff;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <h1>🧪 Client-Side PDF Generation Test</h1>
+    
+    <div class="test-section">
+        <h2>📄 Test Resume PDF Generation</h2>
+        <p>This will test the client-side PDF generation using the same logic as the main app.</p>
+        
+        <label for="sampleResume">Sample Resume Content:</label>
+        <textarea id="sampleResume" placeholder="Enter resume content...">John Doe
+Software Engineer
+Email: john.doe@email.com
+Phone: (555) 123-4567
+
+PROFESSIONAL SUMMARY
+Experienced software engineer with 5+ years of experience in full-stack development.
+
+TECHNICAL SKILLS
+• Programming Languages: JavaScript, Python, Java, C++
+• Web Technologies: React, Node.js, Express, HTML5, CSS3
+• Databases: MongoDB, PostgreSQL, MySQL
+• Tools: Git, Docker, AWS, Jenkins
+
+PROFESSIONAL EXPERIENCE
+
+Senior Software Engineer | Tech Company | 2020 - Present
+• Developed and maintained web applications using React and Node.js
+• Implemented microservices architecture reducing system latency by 40%
+• Led a team of 4 developers on critical project delivery
+• Mentored junior developers and conducted code reviews
+
+Software Engineer | StartupCorp | 2019 - 2020  
+• Built responsive web applications using modern JavaScript frameworks
+• Collaborated with cross-functional teams to deliver high-quality software
+• Implemented automated testing reducing bugs by 30%
+
+EDUCATION
+Bachelor of Science in Computer Science | University of Technology | 2018
+• GPA: 3.8/4.0
+• Relevant Coursework: Data Structures, Algorithms, Software Engineering
+
+ACHIEVEMENTS
+• AWS Certified Solutions Architect
+• Published 3 technical articles on Medium
+• Won Best Innovation Award at Tech Hackathon 2021</textarea>
+
+        <button onclick="testResumePDF()">📁 Generate Resume PDF</button>
+        <div id="resumeResult" class="result" style="display:none;"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>📝 Test Cover Letter PDF Generation</h2>
+        
+        <label for="sampleCover">Sample Cover Letter Content:</label>
+        <textarea id="sampleCover" placeholder="Enter cover letter content...">Dear Hiring Manager,
+
+I am writing to express my strong interest in the Senior Software Engineer position at your company. With over 5 years of experience in full-stack development and a proven track record of delivering high-quality software solutions, I am excited about the opportunity to contribute to your team.
+
+In my current role as a Senior Software Engineer at Tech Company, I have successfully:
+
+• Led the development of scalable web applications serving over 100,000 users
+• Implemented microservices architecture that improved system performance by 40%
+• Mentored junior developers and established coding best practices
+• Collaborated with product managers and designers to deliver user-centric solutions
+
+My technical expertise includes proficiency in JavaScript, React, Node.js, Python, and cloud technologies. I am particularly drawn to your company's mission of creating innovative solutions that make a positive impact on users' lives.
+
+I am excited about the possibility of bringing my passion for clean code, problem-solving skills, and collaborative approach to your development team. I would welcome the opportunity to discuss how my experience and enthusiasm can contribute to your company's continued success.
+
+Thank you for your time and consideration. I look forward to hearing from you.
+
+Best regards,
+John Doe</textarea>
+
+        <button onclick="testCoverPDF()">📁 Generate Cover Letter PDF</button>
+        <div id="coverResult" class="result" style="display:none;"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>🔍 Test Results</h2>
+        <div id="testResults">
+            <p>Click the buttons above to test PDF generation functionality.</p>
+        </div>
+    </div>
+
+    <script>
+        // Simplified version of the ClientPDFGenerator for testing
+        class TestPDFGenerator {
+            constructor() {
+                this.doc = null;
+                this.currentY = 20;
+                this.pageHeight = 280;
+                this.leftMargin = 20;
+                this.rightMargin = 190;
+                this.lineHeight = 6;
+            }
+
+            initializeDoc() {
+                this.doc = new jsPDF('p', 'mm', 'a4');
+                this.currentY = 20;
+            }
+
+            addText(text, fontSize = 10, fontStyle = 'normal', leftMargin = null) {
+                if (!this.doc) this.initializeDoc();
+                
+                const margin = leftMargin || this.leftMargin;
+                this.doc.setFontSize(fontSize);
+                this.doc.setFont('helvetica', fontStyle);
+                
+                const lines = this.doc.splitTextToSize(text, this.rightMargin - margin);
+                
+                if (this.currentY + (lines.length * this.lineHeight) > this.pageHeight) {
+                    this.doc.addPage();
+                    this.currentY = 20;
+                }
+                
+                lines.forEach((line, index) => {
+                    this.doc.text(line, margin, this.currentY);
+                    this.currentY += this.lineHeight;
+                });
+            }
+
+            addSectionHeader(title) {
+                this.currentY += 4;
+                this.addText(title.toUpperCase(), 12, 'bold');
+                this.currentY += 2;
+            }
+
+            addBulletPoint(text, indent = 25) {
+                this.addText('• ' + text, 10, 'normal', indent);
+            }
+
+            cleanResumeText(text) {
+                return text
+                    .replace(/\*\*([^*]+)\*\*/g, '$1')
+                    .replace(/\*([^*]+)\*/g, '$1')
+                    .replace(/###\s*/g, '')
+                    .replace(/##\s*/g, '')
+                    .replace(/#\s*/g, '')
+                    .trim();
+            }
+
+            generateResumePDF(resumeContent, filename = 'resume.pdf') {
+                try {
+                    this.initializeDoc();
+                    
+                    const cleanContent = this.cleanResumeText(resumeContent);
+                    const lines = cleanContent.split('\n').filter(line => line.trim());
+                    
+                    let currentSection = '';
+                    
+                    lines.forEach(line => {
+                        const trimmedLine = line.trim();
+                        
+                        if (!trimmedLine) return;
+                        
+                        // Detect section headers
+                        if (this.isSectionHeader(trimmedLine)) {
+                            currentSection = trimmedLine;
+                            this.addSectionHeader(trimmedLine);
+                        }
+                        // Detect bullet points
+                        else if (trimmedLine.startsWith('•') || trimmedLine.startsWith('-') || trimmedLine.startsWith('*')) {
+                            const bulletText = trimmedLine.replace(/^[•\-*]\s*/, '');
+                            this.addBulletPoint(bulletText);
+                        }
+                        // Regular text
+                        else {
+                            this.addText(trimmedLine);
+                        }
+                    });
+                    
+                    this.doc.save(filename);
+                    return { success: true, message: 'Resume PDF generated successfully!' };
+                } catch (error) {
+                    console.error('Error generating resume PDF:', error);
+                    return { success: false, message: 'Error generating PDF: ' + error.message };
+                }
+            }
+
+            generateCoverLetterPDF(coverContent, filename = 'cover-letter.pdf') {
+                try {
+                    this.initializeDoc();
+                    
+                    const cleanContent = this.cleanResumeText(coverContent);
+                    const paragraphs = cleanContent.split('\n\n').filter(p => p.trim());
+                    
+                    paragraphs.forEach(paragraph => {
+                        if (paragraph.trim()) {
+                            this.addText(paragraph.trim());
+                            this.currentY += 4; // Extra spacing between paragraphs
+                        }
+                    });
+                    
+                    this.doc.save(filename);
+                    return { success: true, message: 'Cover letter PDF generated successfully!' };
+                } catch (error) {
+                    console.error('Error generating cover letter PDF:', error);
+                    return { success: false, message: 'Error generating PDF: ' + error.message };
+                }
+            }
+
+            isSectionHeader(line) {
+                const upperLine = line.toUpperCase();
+                const sections = [
+                    'PROFESSIONAL SUMMARY', 'TECHNICAL SKILLS', 'PROFESSIONAL EXPERIENCE',
+                    'EDUCATION', 'ACHIEVEMENTS', 'PROJECTS', 'CERTIFICATIONS',
+                    'SKILLS', 'EXPERIENCE', 'SUMMARY', 'OBJECTIVE'
+                ];
+                return sections.some(section => upperLine.includes(section));
+            }
+        }
+
+        const pdfGenerator = new TestPDFGenerator();
+
+        function testResumePDF() {
+            const resumeContent = document.getElementById('sampleResume').value;
+            const resultDiv = document.getElementById('resumeResult');
+            
+            if (!resumeContent.trim()) {
+                showResult(resultDiv, 'Please enter resume content to test', false);
+                return;
+            }
+            
+            const result = pdfGenerator.generateResumePDF(resumeContent, 'test-resume.pdf');
+            showResult(resultDiv, result.message, result.success);
+            
+            updateTestResults('Resume PDF Test', result.success, result.message);
+        }
+
+        function testCoverPDF() {
+            const coverContent = document.getElementById('sampleCover').value;
+            const resultDiv = document.getElementById('coverResult');
+            
+            if (!coverContent.trim()) {
+                showResult(resultDiv, 'Please enter cover letter content to test', false);
+                return;
+            }
+            
+            const result = pdfGenerator.generateCoverLetterPDF(coverContent, 'test-cover-letter.pdf');
+            showResult(resultDiv, result.message, result.success);
+            
+            updateTestResults('Cover Letter PDF Test', result.success, result.message);
+        }
+
+        function showResult(element, message, success) {
+            element.style.display = 'block';
+            element.style.background = success ? '#dcfce7' : '#fef2f2';
+            element.style.color = success ? '#166534' : '#dc2626';
+            element.innerHTML = `<strong>${success ? '✅ Success:' : '❌ Error:'}</strong> ${message}`;
+        }
+
+        function updateTestResults(testName, success, message) {
+            const resultsDiv = document.getElementById('testResults');
+            const timestamp = new Date().toLocaleTimeString();
+            
+            const resultItem = document.createElement('div');
+            resultItem.style.padding = '10px';
+            resultItem.style.margin = '5px 0';
+            resultItem.style.borderRadius = '5px';
+            resultItem.style.background = success ? '#dcfce7' : '#fef2f2';
+            resultItem.style.border = success ? '1px solid #16a34a' : '1px solid #dc2626';
+            
+            resultItem.innerHTML = `
+                <strong>[${timestamp}] ${testName}:</strong><br>
+                ${success ? '✅' : '❌'} ${message}
+            `;
+            
+            resultsDiv.appendChild(resultItem);
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('Client-side PDF test page loaded');
+            updateTestResults('System', true, 'PDF testing environment initialized');
+        });
+    </script>
+</body>
+</html>

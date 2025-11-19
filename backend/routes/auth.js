@@ -9,18 +9,19 @@ const client = new OAuth2Client('595202264177-s97i4i7bmi7csrnu6vd9gcuf0314qq7a.a
 // POST /api/auth/google - Verify Google token and authenticate user
 router.post('/google', async (req, res) => {
   try {
-    const { token } = req.body;
+    const { token, credential } = req.body;
+    const idToken = token || credential; // Support both formats
     
-    if (!token) {
+    if (!idToken) {
       return res.status(400).json({
         success: false,
-        message: 'Google token is required'
+        message: 'Google token or credential is required'
       });
     }
 
     // Verify the Google token
     const ticket = await client.verifyIdToken({
-      idToken: token,
+      idToken: idToken,
       audience: '595202264177-s97i4i7bmi7csrnu6vd9gcuf0314qq7a.apps.googleusercontent.com'
     });
 

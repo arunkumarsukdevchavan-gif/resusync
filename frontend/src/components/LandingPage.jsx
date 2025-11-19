@@ -1,238 +1,459 @@
 import React from 'react';
 
-const LandingPage = ({ onGetStarted }) => {
+const LandingPage = ({ onBuildResume }) => {
+  const scrollToContact = () => {
+    document.getElementById('contact-section').scrollIntoView({ behavior: 'smooth' });
+  };
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50">
-      {/* Hero Section */}
-      <section className="pt-20 pb-32">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center">
-            <h1 className="text-4xl md:text-6xl font-bold text-gray-900 mb-6">
-              Transform Your Resume with{' '}
-              <span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                AI Power
-              </span>
-            </h1>
-            <p className="text-xl text-gray-600 mb-8 max-w-3xl mx-auto">
-              Get personalized resume suggestions, generate tailored resumes, and create compelling cover letters 
-              that match any job description. All powered by advanced AI technology.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <button
-                onClick={onGetStarted}
-                className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-4 rounded-xl text-lg font-semibold transition-colors shadow-lg hover:shadow-xl"
-              >
-                Analyze My Resume Free
-              </button>
-              <button className="border-2 border-gray-300 hover:border-gray-400 text-gray-700 px-8 py-4 rounded-xl text-lg font-semibold transition-colors">
-                Watch Demo
-              </button>
-            </div>
+    <div style={{
+      minHeight: '100vh',
+      background: 'linear-gradient(135deg, #8B5CF6 0%, #A855F7 25%, #9333EA 50%, #7C3AED 75%, #6D28D9 100%)',
+      fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
+    }}>
+      {/* Header */}
+      <header style={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        padding: '20px 5%',
+        background: 'rgba(255, 255, 255, 0.1)',
+        backdropFilter: 'blur(10px)',
+        borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
+      }}>
+        {/* Logo */}
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          fontSize: '28px',
+          fontWeight: '700',
+          color: 'white',
+        }}>
+          <div style={{
+            width: '40px',
+            height: '40px',
+            background: 'linear-gradient(45deg, #FFFFFF, #F8FAFC)',
+            borderRadius: '8px',
+            marginRight: '12px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: '20px',
+            color: '#7C3AED',
+            fontWeight: '700',
+          }}>
+            R
           </div>
+          ResuSync
         </div>
-      </section>
 
-      {/* Features Section */}
-      <section id="features" className="py-20 bg-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-              Powerful Features for Your Career
-            </h2>
-            <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-              Everything you need to create a winning resume and land your dream job
-            </p>
-          </div>
-
-          <div className="grid md:grid-cols-3 gap-8">
-            <div className="text-center p-6">
-              <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <svg className="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-              </div>
-              <h3 className="text-xl font-semibold text-gray-900 mb-2">AI Resume Analysis</h3>
-              <p className="text-gray-600">
-                Get instant feedback on your resume with personalized suggestions to improve your chances of getting hired.
-              </p>
-            </div>
-
-            <div className="text-center p-6">
-              <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <svg className="w-8 h-8 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                </svg>
-              </div>
-              <h3 className="text-xl font-semibold text-gray-900 mb-2">Smart Resume Generation</h3>
-              <p className="text-gray-600">
-                Generate optimized resumes tailored to specific job descriptions using advanced AI algorithms.
-              </p>
-            </div>
-
-            <div className="text-center p-6">
-              <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C20.832 18.477 19.246 18 17.5 18c-1.746 0-3.332.477-4.5 1.253" />
-                </svg>
-              </div>
-              <h3 className="text-xl font-semibold text-gray-900 mb-2">Cover Letter Creation</h3>
-              <p className="text-gray-600">
-                Create compelling cover letters that perfectly complement your resume and job application.
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* How It Works Section */}
-      <section id="how-it-works" className="py-20 bg-gray-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-              How It Works
-            </h2>
-            <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-              Get started in just three simple steps
-            </p>
-          </div>
-
-          <div className="grid md:grid-cols-3 gap-8">
-            <div className="text-center">
-              <div className="w-12 h-12 bg-blue-600 text-white rounded-full flex items-center justify-center mx-auto mb-4 text-xl font-bold">
-                1
-              </div>
-              <h3 className="text-xl font-semibold text-gray-900 mb-2">Upload Your Resume</h3>
-              <p className="text-gray-600">
-                Upload your current resume in PDF format or paste the text directly into our platform.
-              </p>
-            </div>
-
-            <div className="text-center">
-              <div className="w-12 h-12 bg-blue-600 text-white rounded-full flex items-center justify-center mx-auto mb-4 text-xl font-bold">
-                2
-              </div>
-              <h3 className="text-xl font-semibold text-gray-900 mb-2">Add Job Description</h3>
-              <p className="text-gray-600">
-                Paste the job description you're targeting to get personalized recommendations.
-              </p>
-            </div>
-
-            <div className="text-center">
-              <div className="w-12 h-12 bg-blue-600 text-white rounded-full flex items-center justify-center mx-auto mb-4 text-xl font-bold">
-                3
-              </div>
-              <h3 className="text-xl font-semibold text-gray-900 mb-2">Get AI-Powered Results</h3>
-              <p className="text-gray-600">
-                Receive instant suggestions, optimized resume, and a tailored cover letter.
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Pricing Section */}
-      <section id="pricing" className="py-20 bg-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-              Simple, Transparent Pricing
-            </h2>
-            <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-              Choose the plan that works best for you
-            </p>
-          </div>
-
-          <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
-            <div className="border-2 border-gray-200 rounded-xl p-8 text-center">
-              <h3 className="text-2xl font-bold text-gray-900 mb-4">Free</h3>
-              <div className="text-4xl font-bold text-gray-900 mb-6">$0</div>
-              <ul className="text-left space-y-3 mb-8">
-                <li className="flex items-center">
-                  <svg className="w-5 h-5 text-green-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                  </svg>
-                  3 resume analyses per month
-                </li>
-                <li className="flex items-center">
-                  <svg className="w-5 h-5 text-green-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                  </svg>
-                  Basic suggestions
-                </li>
-                <li className="flex items-center">
-                  <svg className="w-5 h-5 text-green-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                  </svg>
-                  Cover letter generation
-                </li>
-              </ul>
-              <button 
-                onClick={onGetStarted}
-                className="w-full border-2 border-blue-600 text-blue-600 hover:bg-blue-600 hover:text-white px-6 py-3 rounded-lg font-semibold transition-colors"
-              >
-                Get Started
-              </button>
-            </div>
-
-            <div className="border-2 border-blue-600 rounded-xl p-8 text-center relative bg-blue-50">
-              <div className="absolute top-0 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
-                <span className="bg-blue-600 text-white px-4 py-1 rounded-full text-sm font-semibold">
-                  Coming Soon
-                </span>
-              </div>
-              <h3 className="text-2xl font-bold text-gray-900 mb-4">Pro</h3>
-              <div className="text-4xl font-bold text-gray-900 mb-6">$9.99<span className="text-lg text-gray-600">/mo</span></div>
-              <ul className="text-left space-y-3 mb-8">
-                <li className="flex items-center">
-                  <svg className="w-5 h-5 text-green-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                  </svg>
-                  Unlimited analyses
-                </li>
-                <li className="flex items-center">
-                  <svg className="w-5 h-5 text-green-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                  </svg>
-                  Advanced AI insights
-                </li>
-                <li className="flex items-center">
-                  <svg className="w-5 h-5 text-green-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                  </svg>
-                  Priority support
-                </li>
-                <li className="flex items-center">
-                  <svg className="w-5 h-5 text-green-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                  </svg>
-                  Multiple resume templates
-                </li>
-              </ul>
-              <button className="w-full bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-semibold transition-colors">
-                Coming Soon
-              </button>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* CTA Section */}
-      <section className="py-20 bg-blue-600">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
-            Ready to Transform Your Resume?
-          </h2>
-          <p className="text-xl text-blue-100 mb-8 max-w-2xl mx-auto">
-            Join thousands of job seekers who have improved their resumes with ResuSync AI
-          </p>
+        {/* Navigation */}
+        <nav style={{
+          display: 'flex',
+          gap: '40px',
+          alignItems: 'center',
+        }}>
           <button
-            onClick={onGetStarted}
-            className="bg-white hover:bg-gray-100 text-blue-600 px-8 py-4 rounded-xl text-lg font-semibold transition-colors shadow-lg"
+            onClick={scrollToContact}
+            style={{
+              background: 'none',
+              border: 'none',
+              color: 'white',
+              fontSize: '16px',
+              fontWeight: '500',
+              cursor: 'pointer',
+              transition: 'opacity 0.3s ease',
+            }}
+            onMouseOver={(e) => e.target.style.opacity = '0.8'}
+            onMouseOut={(e) => e.target.style.opacity = '1'}
           >
-            Start Your Free Analysis
+            Contact Us
+          </button>
+          <button
+            style={{
+              background: 'rgba(255, 255, 255, 0.2)',
+              border: '1px solid rgba(255, 255, 255, 0.3)',
+              color: 'white',
+              padding: '12px 24px',
+              borderRadius: '8px',
+              fontSize: '16px',
+              fontWeight: '600',
+              cursor: 'pointer',
+              transition: 'all 0.3s ease',
+            }}
+            onMouseOver={(e) => {
+              e.target.style.background = 'rgba(255, 255, 255, 0.3)';
+              e.target.style.transform = 'translateY(-2px)';
+            }}
+            onMouseOut={(e) => {
+              e.target.style.background = 'rgba(255, 255, 255, 0.2)';
+              e.target.style.transform = 'translateY(0)';
+            }}
+          >
+            Sign In
+          </button>
+        </nav>
+      </header>
+
+      {/* Hero Section */}
+      <main style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        padding: '80px 5%',
+        maxWidth: '1400px',
+        margin: '0 auto',
+        gap: '60px',
+      }}>
+        {/* Left Content */}
+        <div style={{
+          flex: '1',
+          maxWidth: '600px',
+        }}>
+          <h1 style={{
+            fontSize: 'clamp(2.5rem, 5vw, 4rem)',
+            fontWeight: '700',
+            color: 'white',
+            lineHeight: '1.2',
+            marginBottom: '24px',
+          }}>
+            <span style={{
+              background: 'linear-gradient(135deg, #FFFFFF 0%, #F3E8FF 25%, #E9D5FF 50%, #DDD6FE 75%, #FFFFFF 100%)',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              filter: 'brightness(1.2)',
+            }}>
+              Sync your resume. Sync your success.
+            </span>
+          </h1>
+          
+          <p style={{
+            fontSize: '20px',
+            color: 'rgba(255, 255, 255, 0.9)',
+            marginBottom: '32px',
+            lineHeight: '1.5',
+          }}>
+            Make your resume stand out to recruiters
+          </p>
+
+          {/* CTA Button */}
+          <button
+            onClick={onBuildResume}
+            style={{
+              background: 'linear-gradient(135deg, #FFFFFF 0%, #F8FAFC 25%, #F1F5F9 50%, #E2E8F0 75%, #FFFFFF 100%)',
+              border: '2px solid rgba(255, 255, 255, 0.3)',
+              color: '#7C3AED',
+              padding: '18px 36px',
+              borderRadius: '12px',
+              fontSize: '18px',
+              fontWeight: '700',
+              cursor: 'pointer',
+              transition: 'all 0.3s ease',
+              textTransform: 'none',
+              letterSpacing: 'normal',
+              boxShadow: '0 8px 25px rgba(255, 255, 255, 0.2)',
+            }}
+            onMouseOver={(e) => {
+              e.target.style.transform = 'translateY(-3px)';
+              e.target.style.boxShadow = '0 12px 35px rgba(255, 255, 255, 0.3)';
+              e.target.style.background = 'linear-gradient(135deg, #F8FAFC 0%, #FFFFFF 100%)';
+            }}
+            onMouseOut={(e) => {
+              e.target.style.transform = 'translateY(0)';
+              e.target.style.boxShadow = '0 8px 25px rgba(255, 255, 255, 0.2)';
+              e.target.style.background = 'linear-gradient(135deg, #FFFFFF 0%, #F8FAFC 25%, #F1F5F9 50%, #E2E8F0 75%, #FFFFFF 100%)';
+            }}
+          >
+            Build Your Resume
           </button>
         </div>
-      </section>
+
+        {/* Right Content - Resume Preview */}
+        <div style={{
+          flex: '1',
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+        }}>
+          <div style={{
+            width: '400px',
+            height: '500px',
+            background: 'white',
+            borderRadius: '16px',
+            boxShadow: '0 20px 60px rgba(0, 0, 0, 0.3)',
+            padding: '30px',
+            transform: 'rotateY(-5deg) rotateX(5deg)',
+            transformStyle: 'preserve-3d',
+            position: 'relative',
+          }}>
+            {/* Resume Content Preview */}
+            <div style={{
+              width: '100%',
+              height: '100%',
+              background: 'linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%)',
+              borderRadius: '8px',
+              padding: '20px',
+              fontSize: '12px',
+              color: '#333',
+              overflow: 'hidden',
+            }}>
+              <div style={{
+                borderBottom: '2px solid #A855F7',
+                paddingBottom: '10px',
+                marginBottom: '15px',
+              }}>
+                <h3 style={{
+                  fontSize: '18px',
+                  fontWeight: '700',
+                  margin: '0 0 5px 0',
+                  color: '#333',
+                }}>
+                  Jamie Smith
+                </h3>
+                <p style={{
+                  fontSize: '12px',
+                  color: '#666',
+                  margin: '0',
+                }}>
+                  Senior Product Manager
+                </p>
+              </div>
+
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: '1fr 120px',
+                gap: '20px',
+                height: 'calc(100% - 60px)',
+              }}>
+                <div>
+                  <section style={{ marginBottom: '15px' }}>
+                    <h4 style={{
+                      fontSize: '14px',
+                      fontWeight: '600',
+                      color: '#333',
+                      margin: '0 0 8px 0',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.5px',
+                    }}>
+                      Experience
+                    </h4>
+                    <div style={{ fontSize: '10px', lineHeight: '1.4', color: '#666' }}>
+                      <strong>Senior Product Manager</strong><br />
+                      Google • 2021-Present<br />
+                      Led cross-functional teams...
+                    </div>
+                  </section>
+
+                  <section style={{ marginBottom: '15px' }}>
+                    <h4 style={{
+                      fontSize: '14px',
+                      fontWeight: '600',
+                      color: '#333',
+                      margin: '0 0 8px 0',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.5px',
+                    }}>
+                      Education
+                    </h4>
+                    <div style={{ fontSize: '10px', lineHeight: '1.4', color: '#666' }}>
+                      <strong>B.S. Business and Entrepreneurship</strong><br />
+                      Stanford University
+                    </div>
+                  </section>
+
+                  <section>
+                    <h4 style={{
+                      fontSize: '14px',
+                      fontWeight: '600',
+                      color: '#333',
+                      margin: '0 0 8px 0',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.5px',
+                    }}>
+                      Skills
+                    </h4>
+                    <div style={{
+                      display: 'flex',
+                      flexWrap: 'wrap',
+                      gap: '4px',
+                      fontSize: '8px',
+                    }}>
+                      {['Leadership', 'Strategy', 'Analytics', 'Agile'].map(skill => (
+                        <span key={skill} style={{
+                          background: '#e3f2fd',
+                          color: '#1976d2',
+                          padding: '2px 6px',
+                          borderRadius: '4px',
+                          fontSize: '8px',
+                        }}>
+                          {skill}
+                        </span>
+                      ))}
+                    </div>
+                  </section>
+                </div>
+
+                <div>
+                  <section style={{ marginBottom: '15px' }}>
+                    <h4 style={{
+                      fontSize: '12px',
+                      fontWeight: '600',
+                      color: '#333',
+                      margin: '0 0 8px 0',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.5px',
+                    }}>
+                      Achievements
+                    </h4>
+                    <ul style={{
+                      fontSize: '8px',
+                      lineHeight: '1.3',
+                      color: '#666',
+                      paddingLeft: '12px',
+                      margin: '0',
+                    }}>
+                      <li>Increased user engagement by 45%</li>
+                      <li>Led team of 12 developers</li>
+                      <li>Launched 3 major features</li>
+                    </ul>
+                  </section>
+
+                  <section>
+                    <div style={{
+                      width: '80px',
+                      height: '80px',
+                      background: 'linear-gradient(135deg, #A855F7 0%, #9333EA 100%)',
+                      borderRadius: '50%',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: 'white',
+                      fontSize: '10px',
+                      fontWeight: '600',
+                      textAlign: 'center',
+                      margin: '0 auto',
+                    }}>
+                      MY TIME
+                    </div>
+                  </section>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+
+      {/* Contact Section */}
+      <footer id="contact-section" style={{
+        background: 'rgba(0, 0, 0, 0.2)',
+        backdropFilter: 'blur(10px)',
+        padding: '60px 5%',
+        borderTop: '1px solid rgba(255, 255, 255, 0.1)',
+      }}>
+        <div style={{
+          maxWidth: '1200px',
+          margin: '0 auto',
+          textAlign: 'center',
+        }}>
+          <h2 style={{
+            fontSize: '32px',
+            fontWeight: '700',
+            color: 'white',
+            marginBottom: '40px',
+          }}>
+            Get in Touch
+          </h2>
+
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
+            gap: '40px',
+            marginBottom: '40px',
+          }}>
+            <div style={{
+              background: 'rgba(255, 255, 255, 0.1)',
+              padding: '30px',
+              borderRadius: '12px',
+              backdropFilter: 'blur(10px)',
+            }}>
+              <h3 style={{
+                fontSize: '20px',
+                fontWeight: '600',
+                color: 'white',
+                marginBottom: '16px',
+              }}>
+                📧 Email Support
+              </h3>
+              <p style={{
+                color: 'rgba(255, 255, 255, 0.9)',
+                fontSize: '16px',
+                margin: '0',
+              }}>
+                support@resusync.com
+              </p>
+            </div>
+
+            <div style={{
+              background: 'rgba(255, 255, 255, 0.1)',
+              padding: '30px',
+              borderRadius: '12px',
+              backdropFilter: 'blur(10px)',
+            }}>
+              <h3 style={{
+                fontSize: '20px',
+                fontWeight: '600',
+                color: 'white',
+                marginBottom: '16px',
+              }}>
+                📞 Phone Support
+              </h3>
+              <p style={{
+                color: 'rgba(255, 255, 255, 0.9)',
+                fontSize: '16px',
+                margin: '0',
+              }}>
+                +91 6379118592
+              </p>
+            </div>
+
+            <div style={{
+              background: 'rgba(255, 255, 255, 0.1)',
+              padding: '30px',
+              borderRadius: '12px',
+              backdropFilter: 'blur(10px)',
+            }}>
+              <h3 style={{
+                fontSize: '20px',
+                fontWeight: '600',
+                color: 'white',
+                marginBottom: '16px',
+              }}>
+                🕒 Business Hours
+              </h3>
+              <p style={{
+                color: 'rgba(255, 255, 255, 0.9)',
+                fontSize: '16px',
+                margin: '0',
+              }}>
+                Mon-Sat: 9AM-6PM EST
+              </p>
+            </div>
+          </div>
+
+          <div style={{
+            paddingTop: '40px',
+            borderTop: '1px solid rgba(255, 255, 255, 0.1)',
+          }}>
+            <p style={{
+              color: 'rgba(255, 255, 255, 0.7)',
+              fontSize: '14px',
+              margin: '0',
+            }}>
+              © 2025 ResuSync. All rights reserved. | Building better resumes, one click at a time.
+            </p>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 };

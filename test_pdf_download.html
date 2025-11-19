@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PDF Download Test</title>
+</head>
+<body>
+    <h1>PDF Download Test</h1>
+    <button onclick="testDownload()">Test PDF Download</button>
+    <div id="result"></div>
+
+    <script>
+        async function testDownload() {
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = 'Testing PDF download...';
+
+            const testData = {
+                resumeText: `John Doe
+Email: john@example.com | Phone: (555) 123-4567 | LinkedIn: linkedin.com/in/johndoe
+
+OBJECTIVE
+Software Developer with 3 years of experience seeking new opportunities.
+
+EDUCATION
+• Bachelor of Science in Computer Science, XYZ University (2021)
+• GPA: 3.8/4.0
+
+SKILLS
+• Programming Languages: JavaScript, Python, Java
+• Frameworks: React, Node.js, Express
+• Databases: MongoDB, MySQL
+
+EXPERIENCE
+Software Developer Intern
+ABC Company | June 2021 - August 2021
+• Developed web applications using React and Node.js
+• Collaborated with team of 5 developers on agile projects
+• Improved application performance by 25%
+
+PROJECTS
+E-commerce Website
+• Built full-stack e-commerce application
+• Used React, Node.js, and MongoDB
+• Implemented payment gateway integration
+
+ACHIEVEMENTS
+• Dean's List for 3 consecutive semesters
+• Winner of University Coding Competition 2020`,
+                name: 'John Doe',
+                email: 'john@example.com'
+            };
+
+            try {
+                console.log('Sending request to:', 'http://localhost:5001/api/resume/download-pdf');
+                console.log('Request data:', testData);
+
+                const response = await fetch('http://localhost:5001/api/resume/download-pdf', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(testData),
+                });
+
+                console.log('Response status:', response.status);
+                console.log('Response headers:', response.headers);
+
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`HTTP ${response.status}: ${errorText}`);
+                }
+
+                // Create blob from response
+                const blob = await response.blob();
+                console.log('Blob size:', blob.size);
+                
+                if (blob.size === 0) {
+                    throw new Error('Received empty PDF blob');
+                }
+                
+                // Create download link
+                const url = window.URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = 'test_resume.pdf';
+                document.body.appendChild(link);
+                link.click();
+                
+                // Cleanup
+                document.body.removeChild(link);
+                window.URL.revokeObjectURL(url);
+                
+                resultDiv.innerHTML = '✅ PDF downloaded successfully! Check your Downloads folder.';
+            } catch (error) {
+                console.error('Error:', error);
+                resultDiv.innerHTML = `❌ Error: ${error.message}`;
+            }
+        }
+    </script>
+</body>
+</html>

@@ -5,30 +5,66 @@ const fs = require('fs');
 class PDFGenerator {
   constructor() {
     this.browser = null;
+    this.initializationPromise = null;
   }
 
   async initialize() {
+    // Prevent multiple initialization attempts
+    if (this.initializationPromise) {
+      return this.initializationPromise;
+    }
+
     if (!this.browser) {
-      this.browser = await puppeteer.launch({
+      this.initializationPromise = puppeteer.launch({
         headless: 'new',
-        args: ['--no-sandbox', '--disable-setuid-sandbox']
+        args: [
+          '--no-sandbox', 
+          '--disable-setuid-sandbox',
+          '--disable-dev-shm-usage',
+          '--disable-web-security',
+          '--disable-features=VizDisplayCompositor'
+        ]
+      }).then(browser => {
+        this.browser = browser;
+        console.log('Puppeteer browser initialized successfully');
+        return browser;
+      }).catch(error => {
+        console.error('Failed to initialize Puppeteer browser:', error);
+        this.initializationPromise = null;
+        throw error;
       });
+      
+      await this.initializationPromise;
     }
   }
 
   // Main method called from routes
   async generateResume(resumeData, withPhoto = false) {
-    await this.initialize();
+    let page = null;
     
     try {
-      const page = await this.browser.newPage();
+      await this.initialize();
+      
+      console.log('Creating new page for PDF generation');
+      page = await this.browser.newPage();
+      
+      // Set a timeout for the page
+      await page.setDefaultTimeout(10000);
       
       // Generate HTML content
       const htmlContent = this.generateResumeHTML(resumeData, { withPhoto });
       
-      // Set content and wait for fonts to load
-      await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
+      console.log('Setting HTML content and waiting for load');
+      // Set content and wait for fonts to load with timeout
+      await page.setContent(htmlContent, { 
+        waitUntil: 'networkidle0',
+        timeout: 8000
+      });
       
+      // Wait a bit more for any dynamic content
+      await page.waitForTimeout(500);
+      
+      console.log('Generating PDF buffer');
       // Generate PDF
       const pdfBuffer = await page.pdf({
         format: 'A4',
@@ -38,15 +74,25 @@ class PDFGenerator {
           bottom: '0.5in',
           left: '0.5in'
         },
-        printBackground: true
+        printBackground: true,
+        timeout: 10000
       });
       
-      await page.close();
-      
+      console.log('PDF generated successfully, size:', pdfBuffer.length);
       return pdfBuffer;
+      
     } catch (error) {
       console.error('PDF generation error:', error);
       throw new Error('Failed to generate PDF: ' + error.message);
+    } finally {
+      if (page) {
+        try {
+          await page.close();
+          console.log('Page closed successfully');
+        } catch (closeError) {
+          console.error('Error closing page:', closeError);
+        }
+      }
     }
   }
 
@@ -59,31 +105,8 @@ class PDFGenerator {
       return this.generateCoverLetterHTML(resumeData, options);
     }
     
-    // Process photo if available
-    let photoHTML = '';
-    if (withPhoto && resumeData.photoPath) {
-      try {
-        const photoBuffer = fs.readFileSync(resumeData.photoPath);
-        const photoBase64 = photoBuffer.toString('base64');
-        const photoExtension = path.extname(resumeData.photoPath).toLowerCase();
-        let mimeType = 'image/jpeg';
-        
-        if (photoExtension === '.png') mimeType = 'image/png';
-        else if (photoExtension === '.jpg' || photoExtension === '.jpeg') mimeType = 'image/jpeg';
-        
-        photoHTML = `
-          <div class="photo-container">
-            <img src="data:${mimeType};base64,${photoBase64}" alt="Profile Photo" class="profile-photo">
-          </div>
-        `;
-      } catch (error) {
-        console.log('Error processing photo:', error.message);
-        photoHTML = '';
-      }
-    }
-
-    // Format the resume content with proper styling
-    const formattedContent = this.formatResumeContent(content);
+    // Format the resume content with proper styling for single-page layout
+    const formattedContent = this.formatSinglePageResumeContent(content);
 
     return `
 <!DOCTYPE html>
@@ -91,7 +114,7 @@ class PDFGenerator {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>${personalInfo.name || 'Professional Resume'}</title>
+    <title>${personalInfo?.name || 'Professional Resume'}</title>
     <style>
         * {
             margin: 0;
@@ -101,138 +124,213 @@ class PDFGenerator {
         
         body {
             font-family: 'Arial', 'Helvetica', sans-serif;
-            line-height: 1.4;
+            line-height: 1.3;
             color: #333;
             background: white;
-            font-size: 11px;
+            font-size: 10px;
+            padding: 20px;
         }
         
         .container {
             max-width: 210mm;
             margin: 0 auto;
-            padding: 15mm;
             background: white;
+            min-height: 297mm;
         }
         
-        .header {
-            text-align: center;
-            margin-bottom: 20px;
-            border-bottom: 2px solid #2c3e50;
-            padding-bottom: 15px;
-        }
-        
+        /* Centered Name */
         .name {
-            font-size: 24px;
+            text-align: center;
+            font-size: 18px;
             font-weight: 700;
             color: #2c3e50;
             margin-bottom: 8px;
             letter-spacing: 1px;
+            text-transform: uppercase;
         }
         
-        .contact-info {
-            font-size: 11px;
+        /* Contact Line */
+        .contact-line {
+            text-align: center;
+            font-size: 9px;
             color: #555;
-            margin-bottom: 5px;
+            margin-bottom: 15px;
+            border-bottom: 1px solid #ddd;
+            padding-bottom: 10px;
         }
         
-        .section {
-            margin-bottom: 20px;
-        }
-        
-        .section-title {
-            font-size: 14px;
+        /* Section Headers */
+        .section-header {
+            font-size: 12px;
             font-weight: 600;
             color: #2c3e50;
+            margin-top: 12px;
+            margin-bottom: 6px;
             text-transform: uppercase;
-            border-bottom: 1px solid #bdc3c7;
-            padding-bottom: 3px;
-            margin-bottom: 10px;
             letter-spacing: 0.5px;
         }
         
+        /* Section Content */
         .section-content {
-            font-size: 11px;
-            line-height: 1.5;
+            margin-bottom: 10px;
+            font-size: 10px;
+            line-height: 1.4;
         }
         
-        .education-item {
-            margin-bottom: 8px;
-            padding-left: 0px;
-        }
-        
-        .education-degree {
-            font-weight: 500;
-            color: #2c3e50;
-        }
-        
-        .education-score {
-            font-weight: 600;
-            color: #27ae60;
-        }
-        
-        .skill-category {
-            font-weight: 500;
-            color: #2c3e50;
-        }
-        
-        .photo-container {
-            float: right;
-            margin-left: 20px;
-            margin-bottom: 15px;
-        }
-        
-        .profile-photo {
-            width: 100px;
-            height: 120px;
-            object-fit: cover;
-            border-radius: 5px;
-            border: 2px solid #2c3e50;
-        }
-        
-        ul {
-            list-style: none;
-            padding: 0;
-        }
-        
-        li {
-            margin-bottom: 5px;
-            position: relative;
-            padding-left: 15px;
-        }
-        
-        li:before {
-            content: "•";
-            color: #2c3e50;
-            font-weight: bold;
-            position: absolute;
-            left: 0;
-        }
-        
-        .objective {
-            font-style: italic;
-            color: #555;
+        /* Objective specific styling */
+        .objective-content {
             text-align: justify;
+            margin-bottom: 10px;
+            font-size: 10px;
+            line-height: 1.4;
+        }
+        
+        /* Education compact format */
+        .education-item {
+            margin-bottom: 4px;
+            font-size: 10px;
+        }
+        
+        /* Skills compact format */
+        .skills-item {
+            margin-bottom: 3px;
+            font-size: 10px;
+        }
+        
+        /* Experience/Internship format */
+        .experience-title {
+            font-weight: 600;
+            font-size: 10px;
+            margin-bottom: 2px;
+            color: #2c3e50;
+        }
+        
+        .experience-bullet {
+            margin-left: 15px;
+            margin-bottom: 2px;
+            font-size: 9px;
+        }
+        
+        /* Projects format */
+        .project-title {
+            font-weight: 600;
+            font-size: 10px;
+            margin-bottom: 2px;
+            margin-top: 4px;
+            color: #2c3e50;
+        }
+        
+        .project-bullet {
+            margin-left: 15px;
+            margin-bottom: 2px;
+            font-size: 9px;
+        }
+        
+        /* Achievements format */
+        .achievement-item {
+            margin-bottom: 2px;
+            font-size: 9px;
+            margin-left: 15px;
+        }
+        
+        /* Compact spacing for single page */
+        .section {
+            margin-bottom: 8px;
+        }
+        
+        /* Bold text */
+        .bold {
+            font-weight: 600;
         }
     </style>
 </head>
 <body>
     <div class="container">
-        ${photoHTML}
-        <div class="header">
-            <div class="name">${personalInfo.name || 'Professional Name'}</div>
-            <div class="contact-info">
-                ${personalInfo.email ? personalInfo.email : ''}
-                ${personalInfo.email && personalInfo.phone ? ' | ' : ''}
-                ${personalInfo.phone ? personalInfo.phone : ''}
-            </div>
-        </div>
-        
-        <div class="content">
-            ${formattedContent}
-        </div>
+        ${formattedContent}
     </div>
 </body>
-</html>`;
+</html>
+    `;
+  }
+
+  // Format single-page resume content
+  formatSinglePageResumeContent(content) {
+    if (!content) return '';
+    
+    const lines = content.split('\n');
+    let formattedHTML = '';
+    let currentSection = '';
+    let isFirstLine = true;
+    
+    for (let line of lines) {
+      line = line.trim();
+      if (!line) continue;
+      
+      // Check if this is the name (first non-empty line)
+      if (isFirstLine) {
+        formattedHTML += `<div class="name">${this.escapeHtml(line)}</div>\n`;
+        isFirstLine = false;
+        continue;
+      }
+      
+      // Check if this is the contact line (contains | or email)
+      if (line.includes('|') || line.includes('@')) {
+        formattedHTML += `<div class="contact-line">${this.escapeHtml(line)}</div>\n`;
+        continue;
+      }
+      
+      // Check if this is a section header (Objective, Education, etc.)
+      if (this.isSectionHeader(line)) {
+        currentSection = line.toLowerCase();
+        formattedHTML += `<div class="section-header">${this.escapeHtml(line)}</div>\n`;
+        continue;
+      }
+      
+      // Format content based on section
+      if (currentSection === 'objective') {
+        formattedHTML += `<div class="objective-content">${this.escapeHtml(line)}</div>\n`;
+      } else if (currentSection === 'education') {
+        formattedHTML += `<div class="education-item">${this.escapeHtml(line)}</div>\n`;
+      } else if (currentSection === 'skills') {
+        formattedHTML += `<div class="skills-item">${this.escapeHtml(line)}</div>\n`;
+      } else if (currentSection === 'experience' || currentSection === 'internship') {
+        if (line.startsWith('**') && line.endsWith('**')) {
+          // Experience title
+          const title = line.replace(/\*\*/g, '');
+          formattedHTML += `<div class="experience-title">${this.escapeHtml(title)}</div>\n`;
+        } else if (line.startsWith('•')) {
+          // Experience bullet
+          const bullet = line.substring(1).trim();
+          formattedHTML += `<div class="experience-bullet">• ${this.escapeHtml(bullet)}</div>\n`;
+        } else {
+          formattedHTML += `<div class="experience-title">${this.escapeHtml(line)}</div>\n`;
+        }
+      } else if (currentSection === 'projects') {
+        if (line.startsWith('**') && line.endsWith('**')) {
+          // Project title
+          const title = line.replace(/\*\*/g, '');
+          formattedHTML += `<div class="project-title">${this.escapeHtml(title)}</div>\n`;
+        } else if (line.startsWith('•')) {
+          // Project bullet
+          const bullet = line.substring(1).trim();
+          formattedHTML += `<div class="project-bullet">• ${this.escapeHtml(bullet)}</div>\n`;
+        } else {
+          formattedHTML += `<div class="project-title">${this.escapeHtml(line)}</div>\n`;
+        }
+      } else if (currentSection === 'achievements') {
+        if (line.startsWith('•')) {
+          const achievement = line.substring(1).trim();
+          formattedHTML += `<div class="achievement-item">• ${this.escapeHtml(achievement)}</div>\n`;
+        } else {
+          formattedHTML += `<div class="achievement-item">${this.escapeHtml(line)}</div>\n`;
+        }
+      } else {
+        // Default formatting
+        formattedHTML += `<div class="section-content">${this.escapeHtml(line)}</div>\n`;
+      }
+    }
+    
+    return formattedHTML;
   }
 
   // Format resume content with proper section styling
@@ -417,6 +515,168 @@ class PDFGenerator {
     </div>
 </body>
 </html>`;
+  }
+
+  // Generate cover letter PDF with improved error handling
+  async generateCoverLetter(coverLetterData) {
+    let page = null;
+    
+    try {
+      await this.initialize();
+      
+      console.log('Creating new page for cover letter PDF generation');
+      page = await this.browser.newPage();
+      
+      // Set a timeout for the page
+      await page.setDefaultTimeout(10000);
+      
+      // Generate HTML content for cover letter
+      const htmlContent = this.generateCoverLetterHTML(coverLetterData);
+      
+      console.log('Setting cover letter HTML content and waiting for load');
+      // Set content and wait for fonts to load with timeout
+      await page.setContent(htmlContent, { 
+        waitUntil: 'networkidle0',
+        timeout: 8000
+      });
+      
+      // Wait a bit more for any dynamic content
+      await page.waitForTimeout(500);
+      
+      console.log('Generating cover letter PDF buffer');
+      // Generate PDF
+      const pdfBuffer = await page.pdf({
+        format: 'A4',
+        margin: {
+          top: '1in',
+          right: '1in',
+          bottom: '1in',
+          left: '1in'
+        },
+        printBackground: true,
+        timeout: 10000
+      });
+      
+      console.log('Cover letter PDF generated successfully, size:', pdfBuffer.length);
+      return pdfBuffer;
+      
+    } catch (error) {
+      console.error('Cover letter PDF generation error:', error);
+      throw new Error('Failed to generate cover letter PDF: ' + error.message);
+    } finally {
+      if (page) {
+        try {
+          await page.close();
+          console.log('Cover letter page closed successfully');
+        } catch (closeError) {
+          console.error('Error closing cover letter page:', closeError);
+        }
+      }
+    }
+  }
+
+  // Generate HTML for cover letter
+  generateCoverLetterHTML(data) {
+    const { content, name, email } = data;
+    
+    return `
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>${name} - Cover Letter</title>
+        <style>
+            @import url('https://fonts.googleapis.com/css2?family=Arial:wght@400;600;700&display=swap');
+            
+            * {
+                margin: 0;
+                padding: 0;
+                box-sizing: border-box;
+            }
+            
+            body {
+                font-family: 'Arial', sans-serif;
+                font-size: 12px;
+                line-height: 1.6;
+                color: #333;
+                background-color: #fff;
+                padding: 0;
+            }
+            
+            .cover-letter {
+                max-width: 100%;
+                margin: 0 auto;
+                padding: 0;
+            }
+            
+            .cover-letter-content {
+                white-space: pre-line;
+                text-align: left;
+                line-height: 1.8;
+            }
+            
+            .header-name {
+                font-size: 16px;
+                font-weight: bold;
+                margin-bottom: 20px;
+                text-align: left;
+            }
+            
+            .greeting {
+                margin-bottom: 15px;
+                font-weight: 600;
+            }
+            
+            .paragraph {
+                margin-bottom: 15px;
+                text-align: justify;
+            }
+            
+            .signature {
+                margin-top: 30px;
+                text-align: left;
+            }
+            
+            .contact-info {
+                margin-top: 10px;
+                font-size: 11px;
+                color: #666;
+            }
+            
+            @media print {
+                body {
+                    print-color-adjust: exact;
+                    -webkit-print-color-adjust: exact;
+                }
+            }
+        </style>
+    </head>
+    <body>
+        <div class="cover-letter">
+            <div class="cover-letter-content">${this.escapeHtml(content)}</div>
+        </div>
+    </body>
+    </html>
+    `;
+  }
+
+  // Escape HTML special characters to prevent XSS
+  escapeHtml(text) {
+    if (typeof text !== 'string') {
+      return String(text || '');
+    }
+    
+    const map = {
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      '"': '&quot;',
+      "'": '&#x27;',
+      '/': '&#x2F;'
+    };
+    
+    return text.replace(/[&<>"'/]/g, (char) => map[char]);
   }
 
   // Clean up browser resources
